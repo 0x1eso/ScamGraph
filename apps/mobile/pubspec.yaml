@@ -1,0 +1,21 @@
+name: scamgraph_mobile
+description: "ScamGraph 모바일 — 주변 사기 보호 (수동 검사 + SMS·통화 자동 스캔)."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+# 의존성은 의도적으로 최소화한다: HTTP 호출 + 로컬 알림만.
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  flutter_local_notifications: ^17.2.2
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
