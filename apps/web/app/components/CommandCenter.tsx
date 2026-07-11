@@ -11,6 +11,8 @@ import dynamic from "next/dynamic";
 import ScanConsole from "./ScanConsole";
 import LiveFeed from "./LiveFeed";
 import AttributionCard from "./AttributionCard";
+import ActionGuide from "./ActionGuide";
+import ReportModal from "./ReportModal";
 import { expand, getGraph, type ScanResult } from "@/lib/api";
 import {
   mockGraph,
@@ -87,7 +89,7 @@ function mergeGraph(base: GraphData, add: GraphData): GraphData {
 
 export default function CommandCenter() {
   const [graphData, setGraphData] = useState<GraphData>(mockGraph);
-  const [scanned, setScanned] = useState<string | null>(null);
+  const [lastScan, setLastScan] = useState<ScanResult | null>(null);
 
   // 마운트 시 실 관계망(Neo4j)을 불러와 교체한다. 실패하면 시드 mockGraph 유지(데모 세이프).
   useEffect(() => {
@@ -107,7 +109,7 @@ export default function CommandCenter() {
   }, []);
 
   async function handleResult(result: ScanResult) {
-    setScanned(result.target);
+    setLastScan(result);
     // 항상 스캔한 대상 노드를 추가(백엔드가 없어도 그래프가 자란다 = 데모 세이프).
     const own: GraphData = { nodes: [nodeFromScan(result)], edges: [] };
     let addition: GraphData = own;
@@ -126,7 +128,9 @@ export default function CommandCenter() {
     <>
       <ScanConsole onResult={handleResult} />
 
-      <AttributionCard target={scanned} />
+      {lastScan && <ActionGuide kind={lastScan.kind} grade={lastScan.grade} />}
+      <AttributionCard target={lastScan?.target ?? null} />
+      {lastScan && <ReportModal target={lastScan.target} kind={lastScan.kind} />}
 
       <div className="section-label">
         // 사기 인프라 관계망 · {graphData.nodes.length} 노드 · {graphData.edges.length} 관계

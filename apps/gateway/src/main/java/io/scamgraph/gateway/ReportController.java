@@ -2,6 +2,7 @@ package io.scamgraph.gateway;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.neo4j.driver.Driver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,11 +27,13 @@ public class ReportController {
 
     private final RestClient engine;
     private final JdbcTemplate jdbc;
+    private final Driver neo4j;
 
-    public ReportController(RestClient.Builder builder, JdbcTemplate jdbc,
+    public ReportController(RestClient.Builder builder, JdbcTemplate jdbc, Driver neo4j,
                             @Value("${engine.url}") String engineUrl) {
         this.engine = builder.baseUrl(engineUrl).build();
         this.jdbc = jdbc;
+        this.neo4j = neo4j;
     }
 
     @GetMapping("/reports")
@@ -64,26 +67,52 @@ public class ReportController {
     }
 
     @PostMapping("/report")
-    @Operation(summary = "사기 신고 접수",
-            description = "대상·유형·메모로 신고를 접수합니다. 엔진 미가동 시 큐잉 응답으로 폴백합니다.")
+    @Operation(summary = "사기 신고 접수 (플라이휠)",
+            description = "신고를 Postgres에 저장하고 Neo4j 그래프에 커뮤니티 위협으로 즉시 반영합니다 — "
+                    + "신고 즉시 /api/check·귀속을 통해 모두가 보호받습니다.")
     public Object report(@RequestBody ReportRequest req) {
+        String target = req.target() == null ? "" : req.target();
+        String kind = (req.kind() == null || req.kind().isBlank()) ? "url" : req.kind();
+        String note = req.note() == null ? "" : req.note();
+
+        // 1) Postgres 저장
         try {
-            return engine.post()
-                    .uri("/report")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "target", req.target() == null ? "" : req.target(),
-                            "kind", req.kind() == null ? "" : req.kind(),
-                            "note", req.note() == null ? "" : req.note()
-                    ))
-                    .retrieve()
-                    .body(Object.class);
-        } catch (Exception e) {
-            return Map.of(
-                    "status", "queued",
-                    "target", req.target() == null ? "" : req.target()
-            );
+            jdbc.update(
+                    "INSERT INTO reports (target, kind, note, status, votes) VALUES (?, ?, ?, 'pending', 1)",
+                    target, kind, note);
+        } catch (Exception ignored) {
         }
+
+        // 2) Neo4j 그래프에 커뮤니티 위협으로 반영 (신고 즉시 모두가 보호)
+        try {
+            String cypher = switch (kind) {
+                case "phone" -> "MERGE (n:Phone {number:$t}) "
+                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
+                case "account" -> "MERGE (n:Account {number:$t}) "
+                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
+                default -> "MERGE (n:Target {value:$t}) "
+                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, "
+                        + "n.source='community', n.grade = coalesce(n.grade,'warning')";
+            };
+            try (var session = neo4j.session()) {
+                session.run(cypher, Map.of("t", target));
+            }
+        } catch (Exception ignored) {
+        }
+
+        // 3) 누적 커뮤니티 신고 수
+        long reports = 1;
+        try {
+            Long c = jdbc.queryForObject("SELECT COUNT(*) FROM reports WHERE target = ?", Long.class, target);
+            reports = c != null ? c : 1;
+        } catch (Exception ignored) {
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("status", "reported");
+        out.put("target", target);
+        out.put("reports", reports);
+        return out;
     }
 
     @PostMapping("/reports/{id}/moderate")

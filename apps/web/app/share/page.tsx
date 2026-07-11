@@ -9,6 +9,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { check, extractValue, type CheckResult } from "@/lib/check";
+import ActionGuide from "@/app/components/ActionGuide";
 
 // 등급별 표시 색상(디자인 토큰 재사용) + 한글 라벨. ScanConsole과 동일 팔레트.
 const GRADE_META: Record<
@@ -148,6 +149,10 @@ function ShareVerdict() {
 
       {result && !loading && meta && (
         <VerdictPanel result={result} meta={meta} />
+      )}
+
+      {result && !loading && (
+        <ActionGuide kind={result.kind} grade={result.grade} />
       )}
 
       {/* 다시 검사 입력 (공유 시트에서 바로 다른 값도 확인 가능) */}

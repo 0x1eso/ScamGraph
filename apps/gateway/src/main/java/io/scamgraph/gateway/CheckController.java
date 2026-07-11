@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClient;
 
@@ -30,11 +31,13 @@ public class CheckController {
 
     private final RestClient engine;
     private final GraphSource graphSource;
+    private final JdbcTemplate jdbc;
 
-    public CheckController(RestClient.Builder builder, GraphSource graphSource,
+    public CheckController(RestClient.Builder builder, GraphSource graphSource, JdbcTemplate jdbc,
                            @Value("${engine.url}") String engineUrl) {
         this.engine = builder.baseUrl(engineUrl).build();
         this.graphSource = graphSource;
+        this.jdbc = jdbc;
     }
 
     @GetMapping("/check")
@@ -71,14 +74,30 @@ public class CheckController {
 
         // 2) 조직 귀속 (그래프)
         String organization = findOrganization(value);
-
-        // 알려진 사기 조직 인프라에 귀속되면 위험으로 승격 (인프라 연루 = 규칙보다 강한 신호)
         if (organization != null && !"danger".equals(grade)) {
+            grade = "danger";  // 인프라 연루 = 규칙보다 강한 신호
+        }
+
+        // 2b) 커뮤니티 신고 (플라이휠 — 신고가 쌓이면 모두 보호)
+        long communityReports = 0;
+        try {
+            Long c = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM reports WHERE target = ?", Long.class, value);
+            communityReports = c != null ? c : 0;
+        } catch (Exception ignored) {
+        }
+        if (communityReports >= 3) {
             grade = "danger";
+        } else if (communityReports >= 1
+                && ("safe".equals(grade) || "unknown".equals(grade) || "caution".equals(grade))) {
+            grade = "warning";
         }
 
         // 3) 실행 권고
         String recommendation = recommend(kind, grade, organization);
+        if (communityReports > 0) {
+            recommendation = "👥 커뮤니티 " + communityReports + "건 신고됨. " + recommendation;
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("value", value);
@@ -87,6 +106,7 @@ public class CheckController {
         out.put("risk_score", riskScore);
         out.put("reasons", reasons);
         out.put("organization", organization);
+        out.put("community_reports", communityReports);
         out.put("recommendation", recommendation);
         return out;
     }
