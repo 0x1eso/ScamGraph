@@ -1,8 +1,10 @@
 // ScamGraph — 관제 대시보드 랜딩
-// 스캔 콘솔 + 관계망 그래프는 CommandCenter(클라이언트)에서 실데이터로 배선.
-// 상단 stat 카드는 아직 시드 값(다음 단계에서 /api/stats 연동).
+// 스캔 콘솔·관계망 그래프·실시간 피드·지도는 CommandCenter(클라이언트)에서 배선.
+// stat 카드는 StatsBar가 /api/stats 폴링(시드 폴백), 공개 API 홍보는 ApiCallout.
 
 import CommandCenter from "./components/CommandCenter";
+import StatsBar from "./components/StatsBar";
+import ApiCallout from "./components/ApiCallout";
 
 const SERVICES = [
   { name: "gateway", label: "API GATEWAY" },
@@ -10,13 +12,6 @@ const SERVICES = [
   { name: "neo4j", label: "GRAPH DB" },
   { name: "meili", label: "SEARCH" },
   { name: "worker", label: "WORKERS" },
-];
-
-const STATS = [
-  { k: "TRACKED ENTITIES", v: "18,204", cls: "accent", d: "▲ 신규 342 / 24h" },
-  { k: "GRAPH RELATIONS", v: "47,891", cls: "", d: "도메인·번호·계좌·IP" },
-  { k: "SCANS TODAY", v: "1,247", cls: "warn", d: "▲ 실시간 유입 중" },
-  { k: "CONFIRMED THREATS", v: "3,516", cls: "danger", d: "커뮤니티 검증 완료" },
 ];
 
 const PIPE = [
@@ -60,15 +55,7 @@ export default function Home() {
 
         <CommandCenter />
 
-        <div className="grid">
-          {STATS.map((s) => (
-            <div className="stat" key={s.k}>
-              <div className="k">{s.k}</div>
-              <div className={`v ${s.cls}`}>{s.v}</div>
-              <div className="d">{s.d}</div>
-            </div>
-          ))}
-        </div>
+        <StatsBar />
 
         <div className="section-label">// 처리 파이프라인</div>
         <div className="pipe">
@@ -80,6 +67,8 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        <ApiCallout />
       </div>
 
       <footer>SCAMGRAPH · 실시간 사기·피싱 위협 인텔리전스 · 데모 빌드 v0.1</footer>

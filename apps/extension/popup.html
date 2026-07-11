@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ScamGraph</title>
+    <style>
+      :root {
+        --bg: #0c1018;
+        --bg-soft: #131a26;
+        --text: #e7ecf4;
+        --muted: #8a97ac;
+        --accent: #00e5c0;
+        --danger: #ff4d6d;
+        --warn: #ffb020;
+        --safe: #00e5c0;
+        --caution: #ffb020;
+        --mono: "SFMono-Regular", ui-monospace, "JetBrains Mono", "Menlo",
+          "Consolas", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+
+      .header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .brand {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .brand .shield {
+        color: var(--accent);
+      }
+
+      .brand .sub {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 11px;
+      }
+
+      .host {
+        display: block;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        background: var(--bg-soft);
+        border: 1px solid #1e2838;
+        border-radius: 6px;
+        color: var(--accent);
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      button#scan-btn {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 14px;
+        background: var(--accent);
+        color: #06231f;
+        border: none;
+        border-radius: 6px;
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter 120ms ease, transform 80ms ease;
+      }
+
+      button#scan-btn:hover {
+        filter: brightness(1.08);
+      }
+
+      button#scan-btn:active {
+        transform: translateY(1px);
+      }
+
+      button#scan-btn:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      #result {
+        min-height: 40px;
+      }
+
+      .gauge {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .score-ring {
+        --pct: 0;
+        --ring-color: var(--muted);
+        position: relative;
+        width: 68px;
+        height: 68px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: conic-gradient(
+          var(--ring-color) calc(var(--pct) * 1%),
+          #1e2838 0
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .score-ring::after {
+        content: "";
+        position: absolute;
+        inset: 7px;
+        border-radius: 50%;
+        background: var(--bg);
+      }
+
+      .score-num {
+        position: relative;
+        z-index: 1;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .grade-block {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .grade-label {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .grade-caption {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .reasons {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .reasons li {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        border-top: 1px solid #1e2838;
+        font-size: 11px;
+      }
+
+      .reasons .rule {
+        color: var(--text);
+      }
+
+      .reasons .detail {
+        color: var(--muted);
+      }
+
+      .reasons .weight {
+        color: var(--warn);
+        font-weight: 700;
+        flex: 0 0 auto;
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+        padding: 8px 0;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="brand">
+        <span class="shield">■</span> ScamGraph
+        <span class="sub">방패</span>
+      </div>
+    </div>
+
+    <code class="host" id="host">—</code>
+    <button id="scan-btn" type="button">검사</button>
+    <div id="result">
+      <div class="status">버튼을 눌러 현재 사이트를 검사하세요.</div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

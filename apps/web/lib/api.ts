@@ -49,3 +49,20 @@ export async function expand(value: string): Promise<GraphData> {
   }
   return (await res.json()) as GraphData;
 }
+
+// 상단 stat 카드가 폴링하는 실시간 집계값(게이트웨이 응답과 일치).
+export type Stats = {
+  tracked_entities: number;
+  graph_relations: number;
+  scans_today: number;
+  confirmed_threats: number;
+};
+
+// 대시보드 지표 스냅샷을 가져온다(StatsBar가 주기적으로 호출).
+export async function getStats(): Promise<Stats> {
+  const res = await fetch(`${GATEWAY}/api/stats`);
+  if (!res.ok) {
+    throw new Error(`통계 로드 실패 (${res.status})`);
+  }
+  return (await res.json()) as Stats;
+}
