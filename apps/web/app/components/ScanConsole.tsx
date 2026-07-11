@@ -5,7 +5,7 @@
 // framer-motion 미설치를 가정하고 진입 애니메이션은 CSS 트랜지션으로 처리한다.
 
 import { useState } from "react";
-import { scan, type ScanResult } from "@/lib/api";
+import { scan, type ScanReason, type ScanResult } from "@/lib/api";
 
 interface ScanConsoleProps {
   // 스캔 성공 시 상위(page)가 관계망을 확장하도록 결과를 넘겨준다.
@@ -103,9 +103,55 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
   );
 }
 
+// 출처(외부 피드) 근거를 위로, external_feed_hit(신뢰 헤드라인)을 최상단으로 끌어올린다.
+function reasonRank(reason: ScanReason): number {
+  if (reason.rule === "external_feed_hit") {
+    return 0;
+  }
+  if (typeof reason.source === "string" && reason.source.length > 0) {
+    return 1;
+  }
+  return 2;
+}
+
+function hasSource(reason: ScanReason): reason is ScanReason & { source: string } {
+  return typeof reason.source === "string" && reason.source.length > 0;
+}
+
+// 근거 한 건. source가 있으면 "출처 칩"으로, external_feed_hit이면 액센트로 강조한다.
+function ReasonItem({ reason }: { reason: ScanReason }) {
+  const signed = `${reason.weight >= 0 ? "+" : ""}${reason.weight}`;
+
+  if (hasSource(reason)) {
+    const isFeedHit = reason.rule === "external_feed_hit";
+    return (
+      <li className={`sc-reason sc-src${isFeedHit ? " sc-src-feed" : ""}`}>
+        <div className="sc-src-top">
+          <span className="sc-src-badge">출처</span>
+          <span className="sc-src-name">◆ {reason.source}</span>
+          {isFeedHit && <span className="sc-src-headline">실제 위협 피드 등재</span>}
+          <span className="sc-src-weight">{signed}</span>
+        </div>
+        <div className="sc-src-detail">{reason.detail}</div>
+        {reason.first_seen && <div className="sc-src-meta">최초 관측 · {reason.first_seen}</div>}
+      </li>
+    );
+  }
+
+  return (
+    <li className="sc-reason">
+      <span className="sc-rule">{reason.rule}</span>
+      <span className="sc-weight">{signed}</span>
+      <span className="sc-detail">{reason.detail}</span>
+    </li>
+  );
+}
+
 // ── 결과 패널 ────────────────────────────────────────────────
 function ResultPanel({ result }: { result: ScanResult }) {
   const meta = GRADE_META[result.grade];
+  // 원본 불변: 복사본을 정렬해 출처·피드 근거를 상단에 배치한다.
+  const orderedReasons = [...result.reasons].sort((a, b) => reasonRank(a) - reasonRank(b));
 
   return (
     // key로 대상이 바뀔 때마다 진입 애니메이션을 재생한다.
@@ -130,19 +176,26 @@ function ResultPanel({ result }: { result: ScanResult }) {
         </div>
       </div>
 
-      <div className="sc-reasons-label">// 판단 근거 {result.reasons.length}건</div>
+      {result.feed_sources && result.feed_sources.length > 0 && (
+        <div className="sc-feeds" role="note">
+          <span className="sc-feeds-label">📡 위협 피드 대조</span>
+          <span className="sc-feeds-chips">
+            {result.feed_sources.map((source) => (
+              <span className="sc-feeds-chip" key={source}>
+                ◆ {source}
+              </span>
+            ))}
+          </span>
+          <span className="sc-feeds-note">실제 외부 위협 피드에 등재된 지표</span>
+        </div>
+      )}
+
+      <div className="sc-reasons-label">// 판단 근거 {orderedReasons.length}건</div>
       <ul className="sc-reasons">
-        {result.reasons.map((reason, i) => (
-          <li className="sc-reason" key={`${reason.rule}-${i}`}>
-            <span className="sc-rule">{reason.rule}</span>
-            <span className="sc-weight">
-              {reason.weight >= 0 ? "+" : ""}
-              {reason.weight}
-            </span>
-            <span className="sc-detail">{reason.detail}</span>
-          </li>
+        {orderedReasons.map((reason, i) => (
+          <ReasonItem reason={reason} key={`${reason.rule}-${i}`} />
         ))}
-        {result.reasons.length === 0 && (
+        {orderedReasons.length === 0 && (
           <li className="sc-reason sc-reason-empty">
             <span className="sc-detail">특이 위험 신호가 감지되지 않았습니다.</span>
           </li>
@@ -272,6 +325,69 @@ const SCAN_CONSOLE_CSS = `
 }
 .sc-detail { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
 .sc-reason-empty { grid-template-columns: 1fr; }
+
+/* 위협 피드 대조 배너 — feed_sources 요약. "실제 외부 데이터에 등재됨" 신뢰 헤드라인. */
+.sc-feeds {
+  margin-top: 20px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(0, 229, 192, 0.08), rgba(0, 229, 192, 0.02));
+}
+.sc-feeds-label {
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--accent);
+}
+.sc-feeds-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.sc-feeds-chip {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 6px;
+  color: #04120f; background: var(--accent);
+}
+.sc-feeds-note {
+  font-family: var(--mono); font-size: 10px; color: var(--text-mute);
+  margin-left: auto; letter-spacing: 0.3px;
+}
+
+/* 출처 칩 — source 필드를 가진 근거. 외부 데이터에 근거함을 의미로 강조한다. */
+.sc-src {
+  display: block;
+  border-color: rgba(0, 229, 192, 0.28);
+  background: linear-gradient(180deg, rgba(0, 229, 192, 0.05), var(--bg-elev));
+}
+/* external_feed_hit — "실제 위협 피드 등재" 신뢰 헤드라인. 액센트 테두리 + 살짝 크게. */
+.sc-src-feed {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 229, 192, 0.25), 0 6px 24px rgba(0, 229, 192, 0.12);
+  padding: 15px 16px;
+}
+.sc-src-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sc-src-badge {
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px;
+  color: var(--accent); border: 1px solid rgba(0, 229, 192, 0.45);
+  background: rgba(0, 229, 192, 0.08);
+}
+.sc-src-name { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); }
+.sc-src-feed .sc-src-name { font-size: 15px; color: var(--accent); }
+.sc-src-headline {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  color: #04120f; background: var(--accent);
+  padding: 2px 8px; border-radius: 6px;
+}
+.sc-src-weight {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 14px; font-weight: 800; color: var(--warn);
+  white-space: nowrap;
+}
+.sc-src-feed .sc-src-weight { color: var(--danger); }
+.sc-src-detail { font-size: 13px; color: var(--text); line-height: 1.55; margin-top: 9px; }
+.sc-src-meta {
+  font-family: var(--mono); font-size: 10px; color: var(--text-mute);
+  margin-top: 8px; letter-spacing: 0.5px;
+}
 
 @media (max-width: 520px) {
   .sc-reason { grid-template-columns: auto 1fr; }

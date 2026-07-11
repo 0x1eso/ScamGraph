@@ -1,4 +1,4 @@
-.PHONY: up down logs seed clean ps
+.PHONY: up down logs seed clean ps loadtest
 
 up:            ## 전체 플랫폼 빌드 & 실행
 	docker compose up --build
@@ -17,3 +17,6 @@ seed:          ## Neo4j 시드 데이터 주입
 
 clean:         ## 볼륨까지 삭제
 	docker compose down -v
+
+loadtest:      ## 게이트웨이 부하 테스트 (k6/Docker · 스택 기동 필요)
+	docker run --rm -i --network host -e BASE_URL=http://localhost:8080 grafana/k6 run - < loadtest/scan-load.js

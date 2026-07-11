@@ -1,16 +1,31 @@
 """ScamGraph 분석 엔진 API (FastAPI)."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .crawler import quick_assess
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 부팅 직후 위협 피드 수집 1회 트리거(베스트 에포트). 이후엔 워커 내장 beat 가 주기 갱신.
+    try:
+        from .worker import ingest_feeds
+        ingest_feeds.delay()
+    except Exception:  # noqa: BLE001 — 브로커 없어도 API 는 즉시 기동 (demo-safe)
+        pass
+    yield
+
+
 app = FastAPI(
     title="ScamGraph Engine",
     version="0.1.0",
     description="사기·피싱 위협 스캔 엔진 — 규칙 기반(설명 가능) 분석 + 비동기 크롤링/그래프 적재",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,

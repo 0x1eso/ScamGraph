@@ -14,6 +14,10 @@ venv/
 .pytest_cache/
 *.egg-info/
 
+# Celery beat 런타임 산출물(스케줄 상태 파일)
+celerybeat-schedule*
+celerybeat.pid
+
 # Java / Gradle
 .gradle/
 build/

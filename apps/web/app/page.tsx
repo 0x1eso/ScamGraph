@@ -7,6 +7,7 @@ import StatsBar from "./components/StatsBar";
 import ApiCallout from "./components/ApiCallout";
 import SearchBar from "./components/SearchBar";
 import WhyScamGraph from "./components/WhyScamGraph";
+import DataSourcesPanel from "./components/DataSourcesPanel";
 
 const SERVICES = [
   { name: "gateway", label: "API GATEWAY" },
@@ -63,6 +64,9 @@ export default function Home() {
         <CommandCenter />
 
         <WhyScamGraph />
+
+        <div className="section-label">// 데이터 소스</div>
+        <DataSourcesPanel />
 
         <StatsBar />
 

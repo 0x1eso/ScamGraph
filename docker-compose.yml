@@ -55,6 +55,9 @@ services:
       MEILI_URL: http://meilisearch:7700
       MEILI_KEY: scamgraph_dev_key
       DATABASE_URL: postgresql://scamgraph:scamgraph@postgres:5432/scamgraph
+      # 선택: 실제 위협 피드 키(없으면 시드 폴백, 데모 세이프)
+      ABUSECH_AUTH_KEY: ${ABUSECH_AUTH_KEY:-}
+      DATA_GO_KR_KEY: ${DATA_GO_KR_KEY:-}
     ports: ["8000:8000"]
     volumes:
       - ./apps/engine:/app
@@ -64,7 +67,8 @@ services:
 
   worker:
     build: ./apps/engine
-    command: celery -A app.worker.celery_app worker --loglevel=info
+    # -B: 내장 beat 로 위협 피드를 주기 수집(별도 프로세스 불필요, 단일 워커 데모용)
+    command: celery -A app.worker.celery_app worker -B --loglevel=info
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
       REDIS_URL: redis://redis:6379/0
@@ -74,11 +78,14 @@ services:
       MEILI_URL: http://meilisearch:7700
       MEILI_KEY: scamgraph_dev_key
       DATABASE_URL: postgresql://scamgraph:scamgraph@postgres:5432/scamgraph
+      ABUSECH_AUTH_KEY: ${ABUSECH_AUTH_KEY:-}
+      DATA_GO_KR_KEY: ${DATA_GO_KR_KEY:-}
     volumes:
       - ./apps/engine:/app
     depends_on:
       redis: { condition: service_started }
       neo4j: { condition: service_started }
+      postgres: { condition: service_started }
 
   gateway:
     build: ./apps/gateway

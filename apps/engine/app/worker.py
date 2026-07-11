@@ -6,12 +6,23 @@ import os
 from celery import Celery
 
 from .crawler import crawl_and_enrich, score_enrichment
+from .feeds.ingest import ingest_all
 from .graph import upsert_scan
 from .pg import persist_scan
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# 위협 피드 수집 주기(초). 기본 5분.
+FEED_INTERVAL = float(os.getenv("FEED_INGEST_INTERVAL", "300"))
 
 celery_app = Celery("scamgraph", broker=REDIS_URL, backend=REDIS_URL)
+
+# 내장 beat 스케줄 — 별도 프로세스 없이 워커에서 주기 수집(celery worker -B).
+celery_app.conf.beat_schedule = {
+    "ingest-threat-feeds": {
+        "task": "ingest_feeds",
+        "schedule": FEED_INTERVAL,
+    },
+}
 
 
 @celery_app.task(name="scan_target")
@@ -35,3 +46,9 @@ def scan_target(target: str) -> dict:
         result["pg_error"] = str(e)
 
     return result
+
+
+@celery_app.task(name="ingest_feeds")
+def ingest_feeds() -> dict:
+    """공개 위협 피드(OpenPhish·URLhaus·ThreatFox·경찰청)를 수집·적재."""
+    return ingest_all()

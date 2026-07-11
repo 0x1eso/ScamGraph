@@ -14,6 +14,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,10 +107,46 @@ public class CheckController {
             grade = "warning";
         }
 
+        // 2c) 외부 위협 피드 대조 (OpenPhish·URLhaus·ThreatFox·경찰청 — 전 세계/국가 피드)
+        //     설명 가능성 강화: 어느 피드에 언제 등재됐는지 근거로 남긴다.
+        Set<String> feedSources = new LinkedHashSet<>();
+        try {
+            String host = hostOf(value);
+            List<Map<String, Object>> hits = jdbc.query(
+                    "SELECT source, source_kind, detail, first_seen FROM blocklist "
+                            + "WHERE value = ? OR value = ? LIMIT 5",
+                    (rs, rowNum) -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("source", rs.getString("source"));
+                        m.put("source_kind", rs.getString("source_kind"));
+                        m.put("detail", rs.getString("detail"));
+                        m.put("first_seen", String.valueOf(rs.getObject("first_seen")));
+                        return m;
+                    }, value, host);
+            for (Map<String, Object> hit : hits) {
+                Map<String, Object> reason = new LinkedHashMap<>();
+                reason.put("rule", "external_feed_hit");
+                reason.put("weight", 40);
+                reason.put("detail", hit.get("detail"));
+                reason.put("source", hit.get("source"));
+                reason.put("first_seen", hit.get("first_seen"));
+                reasons.add(reason);
+                feedSources.add(String.valueOf(hit.get("source")));
+            }
+            if (!hits.isEmpty()) {
+                grade = "danger";  // 실제 위협 피드 등재 = 규칙보다 강한 신호
+            }
+        } catch (Exception ignored) {
+            // blocklist 미가동 → 피드 대조 없이 진행 (demo-safe)
+        }
+
         // 3) 실행 권고
         String recommendation = recommend(kind, grade, organization);
         if (communityReports > 0) {
             recommendation = "👥 커뮤니티 " + communityReports + "건 신고됨. " + recommendation;
+        }
+        if (!feedSources.isEmpty()) {
+            recommendation = "📡 위협 피드 등재(" + String.join(", ", feedSources) + "). " + recommendation;
         }
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -120,6 +157,7 @@ public class CheckController {
         out.put("reasons", reasons);
         out.put("organization", organization);
         out.put("community_reports", communityReports);
+        out.put("feed_sources", new ArrayList<>(feedSources));
         out.put("recommendation", recommendation);
         return out;
     }

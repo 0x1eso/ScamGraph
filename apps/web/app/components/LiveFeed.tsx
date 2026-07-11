@@ -74,6 +74,8 @@ function seedEvents(now: number): FeedEvent[] {
       risk_score: 92,
       note: "대출 빙자 보이스피싱 다수 제보",
       ts: now - 4000,
+      source: "경찰청",
+      origin: "feed",
     },
     {
       type: "scan",
@@ -83,6 +85,8 @@ function seedEvents(now: number): FeedEvent[] {
       risk_score: 74,
       note: null,
       ts: now - 12000,
+      source: "URLhaus",
+      origin: "feed",
     },
     {
       type: "report",
@@ -164,6 +168,11 @@ export default function LiveFeed() {
                   {row.target}
                 </span>
                 <span className="lf-kind">{KIND_LABEL[row.kind]}</span>
+                {row.source && (
+                  <span className="lf-source" title={`출처 · ${row.source}`}>
+                    ◆ {row.source}
+                  </span>
+                )}
               </div>
               <div className="lf-note">{rowNote(row)}</div>
             </div>
@@ -271,6 +280,11 @@ const LIVE_FEED_CSS = `
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px;
   padding: 2px 7px; border-radius: 6px;
   border: 1px solid var(--line); color: var(--text-dim); flex: 0 0 auto;
+}
+.lf-source {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.5px;
+  padding: 2px 7px; border-radius: 6px;
+  border: 1px dashed var(--line); color: var(--text-mute); flex: 0 0 auto;
 }
 .lf-note {
   font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-top: 5px;

@@ -29,3 +29,43 @@ def persist_scan(result: dict) -> None:
             )
     finally:
         conn.close()
+
+
+def upsert_blocklist(indicators: list) -> dict:
+    """위협 피드 지표를 blocklist 에 upsert. 테이블 없으면 생성(스테일 볼륨 대비, 데모 세이프)."""
+    import psycopg2
+
+    conn = psycopg2.connect(DSN, connect_timeout=3)
+    upserted = 0
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS blocklist (
+                    id          BIGSERIAL PRIMARY KEY,
+                    value       TEXT NOT NULL,
+                    kind        TEXT NOT NULL,
+                    source      TEXT NOT NULL,
+                    source_kind TEXT NOT NULL DEFAULT 'global',
+                    detail      TEXT,
+                    first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE (value, source)
+                )
+                """
+            )
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_blocklist_value ON blocklist (value)")
+            for ind in indicators:
+                cur.execute(
+                    """
+                    INSERT INTO blocklist (value, kind, source, source_kind, detail)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (value, source)
+                    DO UPDATE SET last_seen = now(), detail = EXCLUDED.detail
+                    """,
+                    (ind.value, ind.kind, ind.source, ind.source_kind, ind.detail),
+                )
+                upserted += 1
+    finally:
+        conn.close()
+    return {"upserted": upserted}

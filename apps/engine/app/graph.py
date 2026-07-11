@@ -86,3 +86,48 @@ def upsert_scan(result: dict) -> None:
                 """,
                 target=target, fp=fingerprint,
             )
+
+
+def upsert_feed_indicators(indicators: list) -> dict:
+    """위협 피드 지표를 Target(+공유 IP) 로 적재 — 같은 IP 를 공유하면 그래프에서 클러스터.
+
+    기존 노드 타입(Target/IP/HOSTED_ON)만 사용하므로 그래프 리더 변경이 필요 없다.
+    전화/계좌 등 인프라가 아닌 지표는 그래프에 올리지 않는다(블록리스트에만 저장).
+    """
+    count = 0
+    with driver().session() as session:
+        for ind in indicators:
+            value = getattr(ind, "value", None)
+            kind = getattr(ind, "kind", "domain")
+            source = getattr(ind, "source", "feed")
+            ip = getattr(ind, "ip", None)
+            if not value:
+                continue
+
+            if kind == "ip":
+                session.run(
+                    "MERGE (a:IP {addr: $ip}) SET a.source = $source",
+                    ip=value, source=source,
+                )
+            elif kind in ("url", "domain"):
+                session.run(
+                    """
+                    MERGE (t:Target {value: $value})
+                      SET t.kind = 'url', t.risk_score = 85, t.grade = 'danger',
+                          t.source = $source, t.last_seen = timestamp()
+                    """,
+                    value=value, source=source,
+                )
+                if ip:
+                    session.run(
+                        """
+                        MATCH (t:Target {value: $value})
+                        MERGE (a:IP {addr: $ip})
+                        MERGE (t)-[:HOSTED_ON]->(a)
+                        """,
+                        value=value, ip=ip,
+                    )
+            else:
+                continue  # phone/account 등은 그래프 대상 아님
+            count += 1
+    return {"nodes": count}

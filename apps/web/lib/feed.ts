@@ -15,6 +15,9 @@ export type FeedEvent = {
   risk_score: number | null;
   note: string | null;
   ts: number;
+  // 외부 위협 피드에서 유입된 이벤트일 때만 채워지는 출처/유입 경로(선택).
+  source?: string;
+  origin?: "feed" | "scan";
 };
 
 // http(s):// gateway URL을 ws(s):// 피드 엔드포인트로 변환한다.

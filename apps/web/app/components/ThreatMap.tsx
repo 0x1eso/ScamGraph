@@ -128,6 +128,7 @@ export default function ThreatMap() {
       )}
 
       <TitleChip />
+      <GovBadge />
       <Legend />
     </div>
   );
@@ -183,6 +184,36 @@ function TitleChip() {
         }}
       />
       {"// 실시간 위협 지도"}
+    </div>
+  );
+}
+
+// ── 정부 데이터 배지 ── 우상단. 경찰청 등 정부 데이터가 포함됨을 알린다(정적).
+function GovBadge() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 14,
+        right: 14,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "7px 12px",
+        borderRadius: 10,
+        border: "1px solid var(--line, #1b2231)",
+        background: "rgba(8, 11, 17, 0.72)",
+        backdropFilter: "blur(8px)",
+        fontFamily: MONO,
+        fontSize: 11,
+        letterSpacing: 0.5,
+        color: "var(--text-dim, #8a97ad)",
+      }}
+    >
+      <span style={{ color: "var(--accent, #00e5c0)" }} aria-hidden="true">
+        ◆
+      </span>
+      정부 데이터 · 경찰청
     </div>
   );
 }
