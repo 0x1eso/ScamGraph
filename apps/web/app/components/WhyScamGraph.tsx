@@ -3,6 +3,8 @@
 // 그들이 사일로에서 놓치는 신호를 하나의 사기 조직으로 잇는 "연결 계층"임을 설명한다.
 // 데이터 페칭·훅 없음 → 서버 컴포넌트. 팔레트 토큰(globals.css) 재사용 + 스코프드 <style>.
 
+import AccuracyBadge from "./AccuracyBadge";
+
 const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 
 // 차별점 5행. gov = 정부·통신사 서비스의 한계, sg = ScamGraph가 채우는 계층.
@@ -84,6 +86,9 @@ export default function WhyScamGraph() {
         각자 사일로에서 놓치는 신호를 하나의 사기 조직으로 잇는{" "}
         <strong>오픈 인텔리전스 레이어</strong>입니다.
       </p>
+
+      {/* 판정 정확도 — "정확하다"를 숫자로 증명(라벨셋 기반 precision/recall) */}
+      <AccuracyBadge />
 
       {/* 비교 표 — 데스크톱은 3열 그리드, 좁은 화면은 행 단위 카드로 스택 */}
       <div className="cmp" role="table" aria-label="정부·통신사 서비스와 ScamGraph 비교">

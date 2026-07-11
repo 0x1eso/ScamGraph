@@ -107,6 +107,17 @@ def _is_allowlisted(host: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in ALLOWLIST)
 
 
+# 혼동 문자(homoglyph) 탐지 — 라틴 알파벳처럼 보이는 키릴/그리스 문자로 정상 도메인 위장.
+# 예: 'nаver.com'의 'а'(U+0430 키릴). 퓨니코드(xn--)로 인코딩되기 전의 원시 유니코드 호스트를 잡는다.
+_CONFUSABLE_RANGES = ((0x0400, 0x04FF), (0x0370, 0x03FF))  # Cyrillic, Greek
+
+
+def _has_confusable(host: str) -> bool:
+    return any(
+        any(lo <= ord(ch) <= hi for lo, hi in _CONFUSABLE_RANGES) for ch in host
+    )
+
+
 def quick_assess(target: str) -> dict:
     """네트워크 없이 규칙 기반 위험 평가. 각 규칙은 (점수, 근거)를 남긴다."""
     target = target.strip()
@@ -134,6 +145,12 @@ def quick_assess(target: str) -> dict:
             reasons.append({"rule": "homograph", "weight": 35,
                             "detail": "퓨니코드(xn--) 도메인 — 유명 브랜드 위장 가능성"})
 
+        # 혼동 문자(키릴/그리스 룩얼라이크)로 정상 도메인 위장 — 거의 확실한 악성 신호
+        if _has_confusable(host):
+            score += 40
+            reasons.append({"rule": "homoglyph", "weight": 40,
+                            "detail": "혼동 문자(키릴/그리스 알파벳)로 정상 도메인 위장"})
+
         # 브랜드 사칭(정확 일치) / 타이포스쿼팅(편집거리 1~2) — 토큰 단위
         brand_hit = None
         for tok in tokens:
@@ -144,6 +161,11 @@ def quick_assess(target: str) -> dict:
                     break
                 if 0 < d <= 2 and abs(len(tok) - len(brand)) <= 2:
                     brand_hit = ("typosquatting", brand, tok, d)
+                    break
+                # 브랜드명이 토큰에 임베드(예: 'tosspay' ⊃ 'toss', 'shinhancard' ⊃ 'shinhan')
+                if (len(brand) >= 4 and brand in tok and tok != brand
+                        and registered != brand and len(tok) <= len(brand) + 10):
+                    brand_hit = ("impersonation", brand, tok, 0)
                     break
             if brand_hit:
                 break

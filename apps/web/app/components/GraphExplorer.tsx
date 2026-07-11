@@ -67,9 +67,11 @@ export interface GraphExplorerProps {
   data?: GraphData;
   // 방금 스캔한 대상 id — 그래프에서 카메라 포커스 + 펄스로 킬샷을 연출한다.
   focusId?: string;
+  // 노드에서 "사건 파일"을 열 때 호출(선택) — 조직 전체 인프라 도시에로 이어진다.
+  onOpenCaseFile?: (value: string) => void;
 }
 
-export default function GraphExplorer({ data = mockGraph, focusId }: GraphExplorerProps) {
+export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFile }: GraphExplorerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
@@ -260,7 +262,12 @@ export default function GraphExplorer({ data = mockGraph, focusId }: GraphExplor
 
       <AnimatePresence>
         {selected && (
-          <NodePanel key={selected.id} node={selected} onClose={() => setSelectedId(null)} />
+          <NodePanel
+            key={selected.id}
+            node={selected}
+            onClose={() => setSelectedId(null)}
+            onOpenCaseFile={onOpenCaseFile}
+          />
         )}
       </AnimatePresence>
     </motion.div>
@@ -313,7 +320,15 @@ function Legend() {
 }
 
 // ── 노드 상세 패널 ── 클릭한 노드의 타입·등급·위험점수를 보여준다
-function NodePanel({ node, onClose }: { node: GraphNode; onClose: () => void }) {
+function NodePanel({
+  node,
+  onClose,
+  onOpenCaseFile,
+}: {
+  node: GraphNode;
+  onClose: () => void;
+  onOpenCaseFile?: (value: string) => void;
+}) {
   const accent = node.grade ? GRADE_COLORS[node.grade] : TYPE_COLORS[node.type];
   return (
     <motion.div
@@ -402,6 +417,31 @@ function NodePanel({ node, onClose }: { node: GraphNode; onClose: () => void }) 
             }}
           />
         </div>
+      )}
+
+      {/* 킬샷의 결말 — 이 노드가 속한 조직의 전체 인프라를 사건 파일로 복원 */}
+      {onOpenCaseFile && (
+        <button
+          onClick={() => onOpenCaseFile(node.label)}
+          className="gx-casefile-btn"
+          style={{
+            marginTop: 14,
+            width: "100%",
+            padding: "9px 12px",
+            borderRadius: 9,
+            border: "1px solid var(--danger, #ff4d6d)",
+            background: "rgba(255, 77, 109, 0.1)",
+            color: "var(--danger, #ff4d6d)",
+            fontFamily: MONO,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.4,
+            cursor: "pointer",
+            transition: "background 0.16s ease, transform 0.16s ease",
+          }}
+        >
+          ◆ 사건 파일 열기
+        </button>
       )}
     </motion.div>
   );

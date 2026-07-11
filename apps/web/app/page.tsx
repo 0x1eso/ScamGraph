@@ -9,6 +9,7 @@ import SearchBar from "./components/SearchBar";
 import WhyScamGraph from "./components/WhyScamGraph";
 import DataSourcesPanel from "./components/DataSourcesPanel";
 import ThreatTicker from "./components/ThreatTicker";
+import TrendStrip from "./components/TrendStrip";
 import Reveal from "./components/Reveal";
 
 const SERVICES = [
@@ -75,6 +76,10 @@ export default function Home() {
         <Reveal>
           <div className="section-label">// 데이터 소스</div>
           <DataSourcesPanel />
+        </Reveal>
+
+        <Reveal>
+          <TrendStrip />
         </Reveal>
 
         <Reveal>

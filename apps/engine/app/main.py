@@ -58,3 +58,18 @@ def scan(req: ScanRequest):
         preliminary["async_error"] = str(e)
 
     return {"target": req.target, "job_id": job_id, **preliminary}
+
+
+_accuracy_cache: dict | None = None
+
+
+@app.get("/accuracy")
+def accuracy():
+    """규칙 엔진 판정 정확도(라벨셋 기반 precision/recall/F1). 최초 1회 계산 후 캐시."""
+    global _accuracy_cache
+    if _accuracy_cache is None:
+        from .eval.evaluate import evaluate
+        metrics = evaluate()
+        metrics.pop("misses", None)  # 응답 간결화(오분류 목록 제외)
+        _accuracy_cache = metrics
+    return _accuracy_cache

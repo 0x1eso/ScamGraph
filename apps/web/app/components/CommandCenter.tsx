@@ -48,6 +48,9 @@ const GraphExplorer = dynamic(() => import("./GraphExplorer"), {
   loading: () => panelLoading("관계망 렌더링 준비 중…"),
 });
 
+// 사건 파일 도시에는 오버레이라 뷰포트 진입 전까지 로드할 필요 없음 → 동적 로드.
+const CampaignCaseFile = dynamic(() => import("./CampaignCaseFile"), { ssr: false });
+
 const ThreatMap = dynamic(() => import("./ThreatMap"), {
   ssr: false,
   loading: () => panelLoading("위협 지도 렌더링 준비 중…"),
@@ -93,6 +96,8 @@ function mergeGraph(base: GraphData, add: GraphData): GraphData {
 export default function CommandCenter() {
   const [graphData, setGraphData] = useState<GraphData>(mockGraph);
   const [lastScan, setLastScan] = useState<ScanResult | null>(null);
+  // 그래프 노드에서 "사건 파일 열기" → 이 값으로 조직 도시에 오버레이를 띄운다.
+  const [caseFileValue, setCaseFileValue] = useState<string | null>(null);
 
   // 마운트 시 실 관계망(Neo4j)을 불러와 교체한다. 실패하면 시드 mockGraph 유지(데모 세이프).
   useEffect(() => {
@@ -141,7 +146,11 @@ export default function CommandCenter() {
 
       <div className="cc-split">
         <div className="cc-graph">
-          <GraphExplorer data={graphData} focusId={lastScan?.target} />
+          <GraphExplorer
+            data={graphData}
+            focusId={lastScan?.target}
+            onOpenCaseFile={setCaseFileValue}
+          />
         </div>
         <div className="cc-feed">
           <LiveFeed />
@@ -150,6 +159,10 @@ export default function CommandCenter() {
 
       <div className="section-label">// 실시간 위협 지도</div>
       <ThreatMap />
+
+      {caseFileValue && (
+        <CampaignCaseFile value={caseFileValue} onClose={() => setCaseFileValue(null)} />
+      )}
 
       <style>{CC_CSS}</style>
     </>
