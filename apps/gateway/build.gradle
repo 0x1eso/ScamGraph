@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'io.scamgraph'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = '21'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    // 공개 API 문서(Swagger UI) — /docs
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+    // RestClient 요청 바디 전송용 견고한 HTTP 클라이언트 (JDK 기본 팩토리의 POST 바디 누락 회피)
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
+
+    // 다음 단계: 신고/계정 저장용 (활성화 시 주석 해제)
+    // implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

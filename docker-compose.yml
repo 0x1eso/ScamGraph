@@ -1,0 +1,103 @@
+name: scamgraph
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scamgraph
+      POSTGRES_PASSWORD: scamgraph
+      POSTGRES_DB: scamgraph
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scamgraph"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/scamgraph123
+      NEO4J_PLUGINS: '["apoc"]'
+    ports: ["7474:7474", "7687:7687"]
+    volumes:
+      - neo4jdata:/data
+      - ./infra/neo4j:/seed:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    environment:
+      MEILI_MASTER_KEY: scamgraph_dev_key
+      MEILI_NO_ANALYTICS: "true"
+    ports: ["7700:7700"]
+    volumes:
+      - meilidata:/meili_data
+
+  engine:
+    build: ./apps/engine
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      REDIS_URL: redis://redis:6379/0
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: scamgraph123
+      MEILI_URL: http://meilisearch:7700
+      MEILI_KEY: scamgraph_dev_key
+    ports: ["8000:8000"]
+    volumes:
+      - ./apps/engine:/app
+    depends_on:
+      redis: { condition: service_started }
+      neo4j: { condition: service_started }
+
+  worker:
+    build: ./apps/engine
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      REDIS_URL: redis://redis:6379/0
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: scamgraph123
+      MEILI_URL: http://meilisearch:7700
+      MEILI_KEY: scamgraph_dev_key
+    volumes:
+      - ./apps/engine:/app
+    depends_on:
+      redis: { condition: service_started }
+      neo4j: { condition: service_started }
+
+  gateway:
+    build: ./apps/gateway
+    environment:
+      ENGINE_URL: http://engine:8000
+    ports: ["8080:8080"]
+    depends_on:
+      engine: { condition: service_started }
+
+  web:
+    build: ./apps/web
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: http://localhost:8080
+    ports: ["3001:3000"]
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    depends_on:
+      gateway: { condition: service_started }
+
+volumes:
+  pgdata:
+  neo4jdata:
+  meilidata:

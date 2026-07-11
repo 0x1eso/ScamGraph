@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: scamgraph-gateway
+  threads:
+    virtual:
+      enabled: true   # Java 21 가상 스레드 — 고동시성 처리
+
+engine:
+  url: ${ENGINE_URL:http://localhost:8000}
+
+springdoc:
+  swagger-ui:
+    path: /docs        # 공개 API 문서
+  api-docs:
+    path: /v3/api-docs

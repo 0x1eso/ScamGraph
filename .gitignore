@@ -1,0 +1,40 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Java / Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Docker volumes (root-level bind mounts only — not app source like apps/web/app/data)
+/data/
+
+# 엔진(Python)은 담당자 코드로 대체 예정 — 로컬 dev/test 코드만 유지, 저장소 제외
+/apps/engine/
+
+CLAUDE.md
+.claude
