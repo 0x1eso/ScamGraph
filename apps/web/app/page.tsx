@@ -6,6 +6,7 @@ import CommandCenter from "./components/CommandCenter";
 import StatsBar from "./components/StatsBar";
 import ApiCallout from "./components/ApiCallout";
 import SearchBar from "./components/SearchBar";
+import WhyScamGraph from "./components/WhyScamGraph";
 
 const SERVICES = [
   { name: "gateway", label: "API GATEWAY" },
@@ -60,6 +61,8 @@ export default function Home() {
         <SearchBar />
 
         <CommandCenter />
+
+        <WhyScamGraph />
 
         <StatsBar />
 
