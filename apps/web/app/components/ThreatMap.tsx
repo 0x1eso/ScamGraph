@@ -6,6 +6,7 @@
 // 오프라인에서도 동작한다. 색은 장식이 아니라 위험 등급의 의미로 쓴다.
 
 import { useEffect, useMemo, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import DeckGL from "deck.gl";
 import { ScatterplotLayer, ArcLayer } from "@deck.gl/layers";
 import { MapView, type PickingInfo } from "@deck.gl/core";
@@ -37,6 +38,36 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
+// ── 애니메이션 파라미터 (GPU/compositor 레벨; 의도적으로 은은하게) ──
+// 값을 만졌을 때 깜빡임이 과해지지 않도록 depth는 낮게 유지한다.
+const ORIGIN_PULSE_SPEED = 2.1; // rad/s — 출발점 반지름 맥동 속도
+const ORIGIN_PULSE_DEPTH = 0.22; // 반지름 ±22%
+const ORIGIN_FILL_BASE = 150; // 채움 알파 기준(정적값과 동일)
+const ORIGIN_FILL_DEPTH = 70; // 채움 알파 맥동 폭
+const ARC_WAVE_SPEED = 2.4; // rad/s — 호 밝기 파동 속도
+const ARC_WAVE_DENSITY = 0.5; // 거리→위상 계수 (서울로 수렴하는 파동)
+const ARC_WIDTH_DEPTH = 0.7; // 호 굵기 ±70%
+const ARC_ALPHA_DIP = 150; // 파동 골에서 어두워지는 알파 폭
+const GLOW_PULSE_SPEED = 1.5; // rad/s — 타깃 헤일로 호흡 속도
+const GLOW_PULSE_DEPTH = 0.16; // 헤일로 ±16%
+
+const clamp255 = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
+
+// 점마다 다른 위상(좌표 시드) → 일제히 깜빡이지 않고 어른거린다.
+const originWave = (t: Threat, phase: number): number =>
+  Math.sin(phase * ORIGIN_PULSE_SPEED + t.lng * 0.03 + t.lat * 0.05);
+
+// 서울(타깃)로부터의 거리로 위상을 밀어, 밝기 파동이 안쪽(서울)으로 흐르게 한다.
+const arcWave = (t: Threat, phase: number): number => {
+  const d = Math.hypot(t.lng - TARGET_CENTER.lng, t.lat - TARGET_CENTER.lat);
+  return Math.sin(phase * ARC_WAVE_SPEED - d * ARC_WAVE_DENSITY);
+};
+
+// 파동 골(-1)에서 가장 어둡고, 마루(+1)에서 완전 불투명(255).
+// a=0(정적)이면 항상 255 → 원본 호 색과 동일.
+const arcAlpha = (t: Threat, phase: number, a: number): number =>
+  clamp255(255 - ARC_ALPHA_DIP * (0.5 - 0.5 * arcWave(t, phase)) * a);
+
 export default function ThreatMap() {
   // ssr:false 로 dynamic import 되지만, WebGL 캔버스는 마운트 이후에만 붙인다.
   const [mounted, setMounted] = useState(false);
@@ -44,49 +75,87 @@ export default function ThreatMap() {
     setMounted(true);
   }, []);
 
-  const layers = useMemo(
-    () => [
-      // 공격 궤적 — 출발점에서 타깃(서울)으로 수렴하는 대권 호
+  // 모션 최소화 사용자는 정적 레이어로(라이브 펄스/웨이브 없음).
+  const reduceMotion = useReducedMotion();
+
+  // requestAnimationFrame 위상(초). 각 accessor의 sine 펄스를 구동한다.
+  // reduceMotion이면 루프를 돌리지 않아 phase가 0으로 고정 → 원본 정적 레이어와 동일.
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (!mounted || reduceMotion) {
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      setPhase((now - start) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [mounted, reduceMotion]);
+
+  const layers = useMemo(() => {
+    // 애니메이션 게이트. 0이면 모든 펄스 항이 사라져 원본 정적 레이어와 동일해진다.
+    const a = reduceMotion ? 0 : 1;
+
+    return [
+      // 공격 궤적 — 출발점에서 타깃(서울)으로 수렴하는 대권 호.
+      // 밝기·굵기가 서울로 수렴하는 동심 파동으로 흘러 "위협이 흐르는" 느낌을 준다.
       new ArcLayer<Threat>({
         id: "attacks",
         data: mockThreats,
         greatCircle: true,
         getSourcePosition: (t) => [t.lng, t.lat],
         getTargetPosition: () => [TARGET_CENTER.lng, TARGET_CENTER.lat],
-        getSourceColor: (t) => GRADE_RGB[t.grade],
-        getTargetColor: () => ACCENT_RGB,
-        getWidth: (t) => Math.max(1, t.risk / 30),
+        getSourceColor: (t) => withAlpha(GRADE_RGB[t.grade], arcAlpha(t, phase, a)),
+        getTargetColor: (t) => withAlpha(ACCENT_RGB, arcAlpha(t, phase, a)),
+        getWidth: (t) => Math.max(1, t.risk / 30) * (1 + ARC_WIDTH_DEPTH * arcWave(t, phase) * a),
         widthMinPixels: 1,
         pickable: true,
+        updateTriggers: {
+          getSourceColor: phase,
+          getTargetColor: phase,
+          getWidth: phase,
+        },
       }),
 
-      // 출발점 — 위험도가 클수록 큰 점. 반투명 채움 + 등급색 테두리로 링 효과.
+      // 출발점 — 위험도가 클수록 큰 점. 반지름·채움 알파가 점마다 다른 위상으로 은은히 맥동.
       new ScatterplotLayer<Threat>({
         id: "origins",
         data: mockThreats,
         radiusUnits: "pixels",
         getPosition: (t) => [t.lng, t.lat],
-        getRadius: (t) => 5 + (t.risk / 100) * 16,
+        getRadius: (t) => (5 + (t.risk / 100) * 16) * (1 + ORIGIN_PULSE_DEPTH * originWave(t, phase) * a),
         radiusMinPixels: 4,
         radiusMaxPixels: 24,
-        getFillColor: (t) => withAlpha(GRADE_RGB[t.grade], 150),
+        getFillColor: (t) =>
+          withAlpha(
+            GRADE_RGB[t.grade],
+            clamp255(ORIGIN_FILL_BASE + ORIGIN_FILL_DEPTH * (0.5 + 0.5 * originWave(t, phase)) * a),
+          ),
         stroked: true,
         lineWidthMinPixels: 1.5,
         getLineColor: (t) => withAlpha(GRADE_RGB[t.grade], 235),
         pickable: true,
+        updateTriggers: {
+          getRadius: phase,
+          getFillColor: phase,
+        },
       }),
 
-      // 타깃 글로우 — 넓고 옅은 헤일로로 깊이감을 준다.
+      // 타깃 글로우 — 넓고 옅은 헤일로가 천천히 숨쉬며 깊이감을 준다.
       new ScatterplotLayer<{ lng: number; lat: number }>({
         id: "target-glow",
         data: [TARGET_CENTER],
         radiusUnits: "pixels",
         getPosition: (d) => [d.lng, d.lat],
-        getRadius: 26,
+        getRadius: 26 * (1 + GLOW_PULSE_DEPTH * Math.sin(phase * GLOW_PULSE_SPEED) * a),
         getFillColor: withAlpha(ACCENT_RGB, 45),
+        updateTriggers: { getRadius: phase },
       }),
 
-      // 타깃 코어 — 서울. 액센트 실선.
+      // 타깃 코어 — 서울. 액센트 실선(정적 앵커).
       new ScatterplotLayer<{ lng: number; lat: number }>({
         id: "target-core",
         data: [TARGET_CENTER],
@@ -98,9 +167,8 @@ export default function ThreatMap() {
         lineWidthMinPixels: 2,
         getLineColor: [255, 255, 255, 220],
       }),
-    ],
-    [],
-  );
+    ];
+  }, [phase, reduceMotion]);
 
   return (
     <div

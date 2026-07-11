@@ -65,12 +65,19 @@ function sizeForType(type: GraphNode["type"]): number {
 
 export interface GraphExplorerProps {
   data?: GraphData;
+  // 방금 스캔한 대상 id — 그래프에서 카메라 포커스 + 펄스로 킬샷을 연출한다.
+  focusId?: string;
 }
 
-export default function GraphExplorer({ data = mockGraph }: GraphExplorerProps) {
+export default function GraphExplorer({ data = mockGraph, focusId }: GraphExplorerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
+  // 킬샷 연출용 — 빌드 이펙트에서 채우고, 포커스 이펙트가 재사용(재빌드 없이).
+  const rendererRef = useRef<Sigma | null>(null);
+  const graphRef = useRef<Graph | null>(null);
+  const focusIdRef = useRef<string | null>(null);
+  const pulseRef = useRef(1);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, GraphNode>();
@@ -133,15 +140,28 @@ export default function GraphExplorer({ data = mockGraph }: GraphExplorerProps) 
       minCameraRatio: 0.4,
       maxCameraRatio: 3,
     });
+    rendererRef.current = renderer;
+    graphRef.current = graph;
 
     // hover 포커스: 이웃이 아닌 노드/간선은 흐리게 처리해 관계에 집중시킨다.
     let hovered: string | null = null;
 
     renderer.setSetting("nodeReducer", (node, attrs) => {
+      let a = attrs;
       if (hovered && node !== hovered && !graph.areNeighbors(hovered, node)) {
-        return { ...attrs, color: DIM_COLOR, label: "" };
+        a = { ...a, color: DIM_COLOR, label: "" };
       }
-      return attrs;
+      // 킬샷: 방금 스캔한 노드를 밝게 키우고 펄스 배율을 적용.
+      if (focusIdRef.current && node === focusIdRef.current) {
+        a = {
+          ...a,
+          color: "#5ffbe0",
+          size: (attrs.size ?? 7) * pulseRef.current,
+          zIndex: 10,
+          forceLabel: true,
+        };
+      }
+      return a;
     });
 
     renderer.setSetting("edgeReducer", (edge, attrs) => {
@@ -166,8 +186,52 @@ export default function GraphExplorer({ data = mockGraph }: GraphExplorerProps) 
 
     return () => {
       renderer.kill();
+      if (rendererRef.current === renderer) rendererRef.current = null;
+      if (graphRef.current === graph) graphRef.current = null;
     };
   }, [data]);
+
+  // ── 킬샷 연출 ── 방금 스캔한 노드로 카메라가 날아가고 노드가 펄스한다.
+  // 그래프를 재빌드하지 않고 rendererRef 를 재사용한다. reduced-motion 이면 모션 생략.
+  useEffect(() => {
+    focusIdRef.current = focusId ?? null;
+    const renderer = rendererRef.current;
+    const graph = graphRef.current;
+    if (!focusId || !renderer || !graph || !graph.hasNode(focusId)) {
+      return;
+    }
+    if (reduceMotion) {
+      renderer.refresh();
+      return;
+    }
+
+    const pos = renderer.getNodeDisplayData(focusId);
+    if (pos) {
+      renderer.getCamera().animate({ x: pos.x, y: pos.y, ratio: 0.45 }, { duration: 700 });
+    }
+
+    let raf = 0;
+    const start = performance.now();
+    const DURATION = 1500;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / DURATION);
+      // 3회 감쇠 펄스
+      pulseRef.current = 1 + Math.sin(p * Math.PI * 3) * (1 - p) * 0.9;
+      renderer.refresh();
+      if (p < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        pulseRef.current = 1;
+        renderer.refresh();
+      }
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      pulseRef.current = 1;
+    };
+  }, [focusId, reduceMotion]);
 
   const selected = selectedId ? nodeMap.get(selectedId) ?? null : null;
 

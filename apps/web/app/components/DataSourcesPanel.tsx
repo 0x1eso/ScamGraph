@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { getFeedStats, seedFeedStats, type FeedSource, type FeedStats } from "@/lib/api";
+import CountUp from "./CountUp";
 
 const POLL_MS = 15000;
 
@@ -69,7 +70,7 @@ export default function DataSourcesPanel() {
       <div className="ds-head">
         <div className="ds-head-left">
           <div className="ds-k">// 총 등재 지표</div>
-          <div className="ds-total">{stats.total_indicators.toLocaleString()}</div>
+          <div className="ds-total"><CountUp value={stats.total_indicators} /></div>
           <div className="ds-sub">
             {stats.sources.length}개 소스 연결 · <span className="ds-live">{liveCount} LIVE</span>
           </div>
@@ -93,7 +94,7 @@ export default function DataSourcesPanel() {
                 <li className="ds-row" key={source.id}>
                   <span className={`ds-dot ds-dot-${source.status}`} aria-hidden="true" />
                   <span className="ds-label">{source.label}</span>
-                  <span className="ds-count">{source.count.toLocaleString()}</span>
+                  <CountUp value={source.count} className="ds-count" />
                   <span className="ds-updated">{relativeUpdated(source.last_updated, now)}</span>
                 </li>
               ))}

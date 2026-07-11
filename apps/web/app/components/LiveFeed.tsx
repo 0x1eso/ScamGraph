@@ -3,9 +3,11 @@
 // ScamGraph — 실시간 신고 피드 패널
 // gateway /ws/feed 로 스트리밍되는 스캔·신고 이벤트를 최신순으로 렌더한다.
 // 데모 안전성: 접속 전에도 비지 않도록 시드 이벤트를 채우고, 끊기면 자동 재접속한다.
-// framer-motion 미설치를 가정하고 진입 애니메이션은 CSS keyframe으로 처리한다.
+// 진입/재정렬 애니메이션은 framer-motion(AnimatePresence)으로 처리하며,
+// 모션 최소화(prefers-reduced-motion) 설정을 존중한다. 모션은 transform/opacity만 쓴다.
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { subscribeFeed, type FeedEvent } from "@/lib/feed";
 
 // 리스트에 유지할 최대 이벤트 수(오래된 항목은 잘라낸다).
@@ -115,9 +117,14 @@ type FeedRow = FeedEvent & { seq: number };
 export default function LiveFeed() {
   const [rows, setRows] = useState<FeedRow[]>([]);
   const [connected, setConnected] = useState(false);
+  // 방금 도착한 행의 seq. 이 행에만 하이라이트 플래시를 한 번 씌운다(시드 로드는 제외).
+  const [latestSeq, setLatestSeq] = useState<number | null>(null);
   // 상대 시간 재계산 기준. 실제로는 각 렌더 시점 now를 사용한다.
   const [now, setNow] = useState(() => Date.now());
   const seqRef = useRef(0);
+
+  // 모션 최소화 사용자는 진입/재정렬 애니메이션 없이 즉시 렌더한다.
+  const reduce = useReducedMotion() ?? false;
 
   // 시드 채우기 + 상대 시간 갱신 타이머.
   useEffect(() => {
@@ -129,13 +136,14 @@ export default function LiveFeed() {
   }, []);
 
   // 피드 구독: 새 이벤트를 맨 앞에 넣고 MAX_ROWS로 잘라낸다.
+  // seq는 updater 밖에서 확정해 순수 updater를 유지하고, 그 행을 최신으로 표시한다.
   useEffect(() => {
     const unsubscribe = subscribeFeed(
       (event) => {
-        setRows((prev) => {
-          const next: FeedRow = { ...event, seq: seqRef.current++ };
-          return [next, ...prev].slice(0, MAX_ROWS);
-        });
+        const seq = seqRef.current++;
+        const next: FeedRow = { ...event, seq };
+        setLatestSeq(seq);
+        setRows((prev) => [next, ...prev].slice(0, MAX_ROWS));
       },
       (isConnected) => setConnected(isConnected),
     );
@@ -154,31 +162,54 @@ export default function LiveFeed() {
       </div>
 
       <ul className="lf-list" role="log" aria-live="polite" aria-label="실시간 신고 피드">
-        {rows.map((row) => (
-          <li className="lf-row" key={row.seq}>
-            <span
-              className="lf-grade-dot"
-              style={{ background: gradeColor(row.grade) }}
-              aria-hidden="true"
-            />
-            <div className="lf-main">
-              <div className="lf-line1">
-                <span className={`lf-type lf-type-${row.type}`}>{TYPE_LABEL[row.type]}</span>
-                <span className="lf-target" title={row.target}>
-                  {row.target}
-                </span>
-                <span className="lf-kind">{KIND_LABEL[row.kind]}</span>
-                {row.source && (
-                  <span className="lf-source" title={`출처 · ${row.source}`}>
-                    ◆ {row.source}
-                  </span>
+        <AnimatePresence initial={false}>
+          {rows.map((row) => {
+            const isNewest = row.seq === latestSeq;
+            return (
+              <motion.li
+                className="lf-row"
+                key={row.seq}
+                layout={!reduce}
+                initial={reduce ? false : { opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                transition={{ duration: reduce ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={reduce ? undefined : { x: 2 }}
+              >
+                {isNewest && !reduce && (
+                  <motion.span
+                    className="lf-flash"
+                    aria-hidden="true"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                  />
                 )}
-              </div>
-              <div className="lf-note">{rowNote(row)}</div>
-            </div>
-            <span className="lf-time">{relativeTime(row.ts, now)}</span>
-          </li>
-        ))}
+                <span
+                  className="lf-grade-dot"
+                  style={{ background: gradeColor(row.grade) }}
+                  aria-hidden="true"
+                />
+                <div className="lf-main">
+                  <div className="lf-line1">
+                    <span className={`lf-type lf-type-${row.type}`}>{TYPE_LABEL[row.type]}</span>
+                    <span className="lf-target" title={row.target}>
+                      {row.target}
+                    </span>
+                    <span className="lf-kind">{KIND_LABEL[row.kind]}</span>
+                    {row.source && (
+                      <span className="lf-source" title={`출처 · ${row.source}`}>
+                        ◆ {row.source}
+                      </span>
+                    )}
+                  </div>
+                  <div className="lf-note">{rowNote(row)}</div>
+                </div>
+                <span className="lf-time">{relativeTime(row.ts, now)}</span>
+              </motion.li>
+            );
+          })}
+        </AnimatePresence>
       </ul>
 
       <style>{LIVE_FEED_CSS}</style>
@@ -242,6 +273,7 @@ const LIVE_FEED_CSS = `
 }
 
 .lf-row {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -249,13 +281,19 @@ const LIVE_FEED_CSS = `
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--bg-elev);
-  transition: border-color 0.18s ease, transform 0.18s ease;
-  animation: lf-slide-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* transform은 framer-motion(진입/재정렬/hover)이 소유하므로 여기서는 색만 전환한다. */
+  transition: border-color 0.18s ease;
 }
-.lf-row:hover { border-color: var(--accent); transform: translateX(2px); }
-@keyframes lf-slide-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.lf-row:hover { border-color: var(--accent); }
+
+/* 새 항목 도착 하이라이트 — accent 링/글로우가 한 번 번쩍이고 사라진다(opacity만 애니메이트). */
+.lf-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0, 229, 192, 0.45);
+  pointer-events: none;
 }
 
 .lf-grade-dot {

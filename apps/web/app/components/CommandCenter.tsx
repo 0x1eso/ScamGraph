@@ -25,6 +25,7 @@ const panelLoading = (label: string) => (
   <div
     role="status"
     aria-live="polite"
+    className="skeleton-shimmer"
     style={{
       height: 520,
       borderRadius: 14,
@@ -140,7 +141,7 @@ export default function CommandCenter() {
 
       <div className="cc-split">
         <div className="cc-graph">
-          <GraphExplorer data={graphData} />
+          <GraphExplorer data={graphData} focusId={lastScan?.target} />
         </div>
         <div className="cc-feed">
           <LiveFeed />

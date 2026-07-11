@@ -8,6 +8,8 @@ import ApiCallout from "./components/ApiCallout";
 import SearchBar from "./components/SearchBar";
 import WhyScamGraph from "./components/WhyScamGraph";
 import DataSourcesPanel from "./components/DataSourcesPanel";
+import ThreatTicker from "./components/ThreatTicker";
+import Reveal from "./components/Reveal";
 
 const SERVICES = [
   { name: "gateway", label: "API GATEWAY" },
@@ -47,6 +49,9 @@ export default function Home() {
         </a>
       </div>
 
+      {/* 실시간 위협 피드 티커 — 상단 풀블리드 (관제 스트립) */}
+      <ThreatTicker />
+
       <div className="wrap">
         <p className="eyebrow">Threat Intelligence · SDG 16</p>
         <h1 className="hero-title">
@@ -63,25 +68,35 @@ export default function Home() {
 
         <CommandCenter />
 
-        <WhyScamGraph />
+        <Reveal>
+          <WhyScamGraph />
+        </Reveal>
 
-        <div className="section-label">// 데이터 소스</div>
-        <DataSourcesPanel />
+        <Reveal>
+          <div className="section-label">// 데이터 소스</div>
+          <DataSourcesPanel />
+        </Reveal>
 
-        <StatsBar />
+        <Reveal>
+          <StatsBar />
+        </Reveal>
 
-        <div className="section-label">// 처리 파이프라인</div>
-        <div className="pipe">
-          {PIPE.map((n) => (
-            <div className="node" key={n.t}>
-              <div className="t">{n.t}</div>
-              <div className="s">{n.s}</div>
-              <span className="tag">{n.tag}</span>
-            </div>
-          ))}
-        </div>
+        <Reveal>
+          <div className="section-label">// 처리 파이프라인</div>
+          <div className="pipe">
+            {PIPE.map((n) => (
+              <div className="node" key={n.t}>
+                <div className="t">{n.t}</div>
+                <div className="s">{n.s}</div>
+                <span className="tag">{n.tag}</span>
+              </div>
+            ))}
+          </div>
+        </Reveal>
 
-        <ApiCallout />
+        <Reveal>
+          <ApiCallout />
+        </Reveal>
       </div>
 
       <footer>SCAMGRAPH · 실시간 사기·피싱 위협 인텔리전스 · 데모 빌드 v0.1</footer>
