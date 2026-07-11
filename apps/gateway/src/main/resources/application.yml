@@ -7,6 +7,24 @@ spring:
   threads:
     virtual:
       enabled: true   # Java 21 가상 스레드 — 고동시성 처리
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/scamgraph}
+    username: ${SPRING_DATASOURCE_USERNAME:scamgraph}
+    password: ${SPRING_DATASOURCE_PASSWORD:scamgraph}
+    hikari:
+      initialization-fail-timeout: -1   # DB 다운 시에도 게이트웨이는 기동 (데모 세이프)
+      connection-timeout: 3000
+
+# Neo4j — 관계망 실데이터 직접 조회
+neo4j:
+  uri: ${NEO4J_URI:bolt://neo4j:7687}
+  user: ${NEO4J_USER:neo4j}
+  password: ${NEO4J_PASSWORD:scamgraph123}
+
+# Meilisearch — 자체 검색엔진
+meili:
+  url: ${MEILI_URL:http://meilisearch:7700}
+  key: ${MEILI_KEY:scamgraph_dev_key}
 
 engine:
   url: ${ENGINE_URL:http://localhost:8000}

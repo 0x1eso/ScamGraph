@@ -6,11 +6,11 @@
 // 브로드캐스트하므로 LiveFeed에 자동 반영된다.
 // Sigma/deck.gl은 브라우저 전용이라 ssr:false 로 동적 로드한다.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import ScanConsole from "./ScanConsole";
 import LiveFeed from "./LiveFeed";
-import { expand, type ScanResult } from "@/lib/api";
+import { expand, getGraph, type ScanResult } from "@/lib/api";
 import {
   mockGraph,
   type GraphData,
@@ -86,6 +86,23 @@ function mergeGraph(base: GraphData, add: GraphData): GraphData {
 
 export default function CommandCenter() {
   const [graphData, setGraphData] = useState<GraphData>(mockGraph);
+
+  // 마운트 시 실 관계망(Neo4j)을 불러와 교체한다. 실패하면 시드 mockGraph 유지(데모 세이프).
+  useEffect(() => {
+    let alive = true;
+    getGraph()
+      .then((live) => {
+        if (alive && live && Array.isArray(live.nodes) && live.nodes.length > 0) {
+          setGraphData(live);
+        }
+      })
+      .catch(() => {
+        /* 게이트웨이 미가동 → mockGraph 유지 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function handleResult(result: ScanResult) {
     // 항상 스캔한 대상 노드를 추가(백엔드가 없어도 그래프가 자란다 = 데모 세이프).

@@ -5,6 +5,7 @@
 import CommandCenter from "./components/CommandCenter";
 import StatsBar from "./components/StatsBar";
 import ApiCallout from "./components/ApiCallout";
+import SearchBar from "./components/SearchBar";
 
 const SERVICES = [
   { name: "gateway", label: "API GATEWAY" },
@@ -39,6 +40,9 @@ export default function Home() {
             <span className="dot" /> {s.label}
           </span>
         ))}
+        <a className="svc" href="/admin" style={{ color: "var(--accent)", textDecoration: "none" }}>
+          ◆ 관리자
+        </a>
       </div>
 
       <div className="wrap">
@@ -52,6 +56,8 @@ export default function Home() {
           분석하고, 사기 인프라의 연결망을 그래프와 지도로 펼쳐 보여줍니다. 블랙박스가
           아닌, 근거를 설명하는 디지털 시민 방어 플랫폼.
         </p>
+
+        <SearchBar />
 
         <CommandCenter />
 
