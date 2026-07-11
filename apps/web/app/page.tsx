@@ -33,12 +33,12 @@ export default function Home() {
           Scam<b>Graph</b>
         </span>
         <span className="svc">
-          <span className="dot" /> SYSTEM ONLINE
+          <span className="dot" aria-hidden="true" /> SYSTEM ONLINE
         </span>
         <span className="spacer" />
         {SERVICES.map((s) => (
           <span className="svc" key={s.name}>
-            <span className="dot" /> {s.label}
+            <span className="dot" aria-hidden="true" /> {s.label}
           </span>
         ))}
         <a className="svc" href="/admin" style={{ color: "var(--accent)", textDecoration: "none" }}>

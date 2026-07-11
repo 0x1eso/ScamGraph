@@ -45,6 +45,19 @@ public class CheckController {
             description = "URL·전화·계좌를 판정하고, 알려진 사기 조직 귀속과 실행 권고를 함께 반환합니다.")
     @SuppressWarnings("unchecked")
     public Map<String, Object> check(@RequestParam String value) {
+        // 입력 검증 — 비정상적으로 긴 입력 방어
+        if (value == null || value.length() > 2048) {
+            Map<String, Object> bad = new LinkedHashMap<>();
+            bad.put("value", "");
+            bad.put("kind", "url");
+            bad.put("grade", "unknown");
+            bad.put("risk_score", null);
+            bad.put("reasons", List.of());
+            bad.put("organization", null);
+            bad.put("community_reports", 0);
+            bad.put("recommendation", "입력이 올바르지 않습니다.");
+            return bad;
+        }
         String kind = "url";
         String grade = "unknown";
         Integer riskScore = null;

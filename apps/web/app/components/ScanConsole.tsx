@@ -86,7 +86,7 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
 
       {loading && (
         <div className="sc-scanning" role="status" aria-live="polite">
-          <span className="sc-scan-dot" /> 엔진이 대상을 분석하는 중…
+          <span className="sc-scan-dot" aria-hidden="true" /> 엔진이 대상을 분석하는 중…
         </div>
       )}
 

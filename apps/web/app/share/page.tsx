@@ -45,9 +45,9 @@ export default function SharePage() {
 function ShareBooting() {
   return (
     <div className="sv-shell">
-      <div className="sv-eyebrow">SCAMGRAPH · 공유 검사</div>
+      <h1 className="sv-eyebrow">SCAMGRAPH · 공유 검사</h1>
       <div className="sv-loading" role="status" aria-live="polite">
-        <span className="sv-loading-dot" /> 공유 내용을 여는 중…
+        <span className="sv-loading-dot" aria-hidden="true" /> 공유 내용을 여는 중…
       </div>
     </div>
   );
@@ -119,7 +119,7 @@ function ShareVerdict() {
 
   return (
     <div className="sv-shell">
-      <div className="sv-eyebrow">SCAMGRAPH · 공유 검사</div>
+      <h1 className="sv-eyebrow">SCAMGRAPH · 공유 검사</h1>
 
       {/* 아직 아무것도 검사하지 않은 직접 방문 상태 */}
       {!hasChecked && !loading && (
@@ -132,7 +132,7 @@ function ShareVerdict() {
 
       {loading && (
         <div className="sv-loading" role="status" aria-live="polite">
-          <span className="sv-loading-dot" /> 위협 엔진이 분석하는 중…
+          <span className="sv-loading-dot" aria-hidden="true" /> 위협 엔진이 분석하는 중…
         </div>
       )}
 

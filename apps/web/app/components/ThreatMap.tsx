@@ -104,6 +104,8 @@ export default function ThreatMap() {
 
   return (
     <div
+      role="img"
+      aria-label="실시간 위협 지도 — 사기 인프라의 지리적 출발점을 위험 등급 색(위험·경고·주의)의 점으로, 서울 타깃으로 수렴하는 공격 궤적을 호로 표시합니다."
       style={{
         position: "relative",
         width: "100%",

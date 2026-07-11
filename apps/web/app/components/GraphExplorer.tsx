@@ -180,6 +180,8 @@ export default function GraphExplorer({ data = mockGraph }: GraphExplorerProps) 
     >
       <div
         ref={containerRef}
+        role="img"
+        aria-label={`사기 인프라 관계망 시각화 — 노드 ${data.nodes.length}개와 관계 ${data.edges.length}개로 이뤄진 위협 네트워크. 캠페인·공유 IP를 축으로 위험 대상들이 연결됩니다.`}
         style={{
           width: "100%",
           height: 520,

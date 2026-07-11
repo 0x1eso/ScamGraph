@@ -23,6 +23,8 @@ import {
 
 const panelLoading = (label: string) => (
   <div
+    role="status"
+    aria-live="polite"
     style={{
       height: 520,
       borderRadius: 14,

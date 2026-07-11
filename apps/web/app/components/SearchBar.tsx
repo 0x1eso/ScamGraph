@@ -125,7 +125,7 @@ export default function SearchBar() {
         <div className="sb-panel">
           {loading && (
             <div className="sb-status" role="status" aria-live="polite">
-              <span className="sb-spinner" /> 검색 중…
+              <span className="sb-spinner" aria-hidden="true" /> 검색 중…
             </div>
           )}
 

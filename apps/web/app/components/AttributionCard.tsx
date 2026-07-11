@@ -70,7 +70,7 @@ export default function AttributionCard({ target }: AttributionCardProps) {
     return (
       <div className="attr" role="status" aria-live="polite">
         <div className="attr-loading">
-          <span className="attr-loading-dot" /> 연루 분석 중…
+          <span className="attr-loading-dot" aria-hidden="true" /> 연루 분석 중…
         </div>
         <style>{ATTRIBUTION_CSS}</style>
       </div>

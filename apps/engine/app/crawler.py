@@ -41,6 +41,18 @@ PHISH_KEYWORDS = {
     "urgent", "check", "cancel", "block", "warning", "expired",
 }
 
+# 정상 도메인 화이트리스트 — 오탐(false positive) 방지. 신뢰의 핵심.
+# 이 도메인(또는 하위 도메인)은 규칙에 걸려도 안전으로 판정한다.
+ALLOWLIST = {
+    "naver.com", "naver.me", "navercorp.com", "kakao.com", "kakaocorp.com",
+    "daum.net", "google.com", "youtube.com", "gmail.com", "apple.com",
+    "microsoft.com", "samsung.com", "coupang.com", "toss.im", "tossbank.com",
+    "kbstar.com", "kbfg.com", "shinhan.com", "shinhancard.com", "wooribank.com",
+    "nonghyup.com", "nhbank.com", "ibk.co.kr", "hanabank.com", "kebhana.com",
+    "kakaobank.com", "gov.kr", "korea.kr", "go.kr", "police.go.kr", "fss.or.kr",
+    "kisa.or.kr", "11st.co.kr", "gmarket.co.kr", "baemin.com",
+}
+
 
 def _grade(score: int) -> str:
     if score >= 70:
@@ -88,6 +100,13 @@ def _host_of(target: str) -> str:
     return (urlparse(t).hostname or "").lower()
 
 
+def _is_allowlisted(host: str) -> bool:
+    """정상 도메인(또는 그 하위 도메인)인지 — 오탐 방지."""
+    if not host:
+        return False
+    return any(host == d or host.endswith("." + d) for d in ALLOWLIST)
+
+
 def quick_assess(target: str) -> dict:
     """네트워크 없이 규칙 기반 위험 평가. 각 규칙은 (점수, 근거)를 남긴다."""
     target = target.strip()
@@ -103,6 +122,12 @@ def quick_assess(target: str) -> dict:
         name_part = ".".join(labels[:-1]) if len(labels) >= 2 else host
         tokens = [tok for tok in re.split(r"[.\-_]", name_part)
                   if tok.isalnum() and len(tok) >= 3]
+
+        # 정상 도메인 화이트리스트 → 오탐 방지 (즉시 안전 판정)
+        if _is_allowlisted(host):
+            return {"kind": kind, "risk_score": 0, "grade": "safe",
+                    "reasons": [{"rule": "verified_domain", "weight": 0,
+                                 "detail": "알려진 정상 도메인 (검증된 화이트리스트)"}]}
 
         if host.startswith("xn--") or ".xn--" in host:
             score += 35

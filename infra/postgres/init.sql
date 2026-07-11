@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS scans (
 );
 CREATE INDEX IF NOT EXISTS idx_scans_target ON scans (target);
 CREATE INDEX IF NOT EXISTS idx_scans_created ON scans (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scans_grade ON scans (grade);
+CREATE INDEX IF NOT EXISTS idx_scans_kind ON scans (kind);
 
 CREATE TABLE IF NOT EXISTS reports (
     id           BIGSERIAL PRIMARY KEY,

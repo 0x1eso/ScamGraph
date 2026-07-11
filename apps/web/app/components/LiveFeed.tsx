@@ -141,7 +141,7 @@ export default function LiveFeed() {
   return (
     <div className="lf">
       <div className="lf-head">
-        <span className={`lf-live-dot ${connected ? "on" : "off"}`} />
+        <span className={`lf-live-dot ${connected ? "on" : "off"}`} aria-hidden="true" />
         <span className="lf-title">실시간 신고 피드</span>
         <span className="lf-spacer" />
         <span className={`lf-status ${connected ? "on" : "off"}`}>
@@ -149,7 +149,7 @@ export default function LiveFeed() {
         </span>
       </div>
 
-      <ul className="lf-list">
+      <ul className="lf-list" role="log" aria-live="polite" aria-label="실시간 신고 피드">
         {rows.map((row) => (
           <li className="lf-row" key={row.seq}>
             <span

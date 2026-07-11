@@ -5,7 +5,9 @@
   --line: #1b2231;
   --text: #e7ecf4;
   --text-dim: #8a97ad;
-  --text-mute: #566072;
+  /* WCAG AA: nudged from #566072 (~3.1:1) so muted text clears 4.5:1 on the
+     dark surfaces it sits on, while staying dimmer than --text-dim. */
+  --text-mute: #78849a;
   --accent: #00e5c0;
   --accent-2: #7cf03d;
   --danger: #ff4d6d;
@@ -206,4 +208,35 @@ footer {
   font-size: 11px;
   color: var(--text-mute);
   text-align: center;
+}
+
+/* ── accessibility: visible keyboard focus ──
+   Keyboard/screen-reader users must see where focus is. :focus-visible only
+   paints the ring for keyboard navigation, so mouse clicks stay clean. This
+   sits last in the sheet so it wins the equal-specificity tie with base
+   `outline: none` inputs; component :focus / :focus-within border styles still
+   layer on top, and more-specific rings (e.g. .rm-trigger) keep their color. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── accessibility: respect reduced-motion ──
+   Neutralize CSS animations/transitions for users who ask for less motion.
+   (Framer Motion honors this separately via useReducedMotion.) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
