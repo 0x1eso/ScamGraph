@@ -11,6 +11,22 @@ import re
 from datetime import datetime
 from urllib.parse import urlparse
 
+import tldextract
+
+from .signals import (
+    confusable_skeleton,
+    decode_idna,
+    has_double_encoding,
+    ip_representation,
+    is_confusable_host,
+    is_shortener,
+    nonstandard_port,
+)
+
+# eTLD+1 추출기. suffix_list_urls=() + cache_dir=None 으로 네트워크·디스크 접근을 차단하고
+# 패키지 번들 스냅샷만 사용한다 → quick_assess 는 절대 네트워크를 호출하지 않는다(demo-safe).
+_EXTRACT = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
+
 # 타이포스쿼팅 비교 대상 (국내외 주요 브랜드/기관)
 KNOWN_BRANDS = [
     "google", "naver", "kakao", "kakaobank", "toss", "kbstar", "shinhan", "woori",
@@ -107,15 +123,64 @@ def _is_allowlisted(host: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in ALLOWLIST)
 
 
-# 혼동 문자(homoglyph) 탐지 — 라틴 알파벳처럼 보이는 키릴/그리스 문자로 정상 도메인 위장.
-# 예: 'nаver.com'의 'а'(U+0430 키릴). 퓨니코드(xn--)로 인코딩되기 전의 원시 유니코드 호스트를 잡는다.
-_CONFUSABLE_RANGES = ((0x0400, 0x04FF), (0x0370, 0x03FF))  # Cyrillic, Greek
-
-
+# 혼동 문자(homoglyph) 탐지 — 라틴 알파벳처럼 보이는 키릴/그리스/전각 문자로 정상 도메인 위장.
+# 예: 'nаver.com'의 'а'(U+0430 키릴). 퓨니코드(xn--)는 디코드 후 스켈레톤으로 검사한다.
+# 상세 구현은 app.signals.confusables 참조.
 def _has_confusable(host: str) -> bool:
-    return any(
-        any(lo <= ord(ch) <= hi for lo, hi in _CONFUSABLE_RANGES) for ch in host
-    )
+    return is_confusable_host(host)
+
+
+def _registrable(host: str) -> tuple[str, str, str, str]:
+    """(subdomain, domain, suffix, registered_domain) 반환.
+
+    tldextract 로 멀티파트 TLD(co.kr·go.kr·com.au 등)까지 정확히 분해한다.
+    실패 시 labels[-2] 근사치로 폴백해 quick_assess 가 절대 예외를 던지지 않게 한다.
+    """
+    try:
+        ext = _EXTRACT(host)
+        if ext.suffix and ext.domain:
+            return ext.subdomain, ext.domain, ext.suffix, ext.registered_domain
+    except Exception:  # noqa: BLE001 — 폴백
+        pass
+    labels = host.split(".") if host else []
+    if len(labels) >= 2:
+        return ".".join(labels[:-2]), labels[-2], labels[-1], ".".join(labels[-2:])
+    return "", host, "", host
+
+
+def _tokens(text: str) -> list[str]:
+    """도메인 이름 부분을 하이픈/언더스코어/점 단위 영숫자 토큰으로 분해(길이 3+)."""
+    return [t for t in re.split(r"[.\-_]", text) if t.isalnum() and len(t) >= 3]
+
+
+def _brand_hit(tokens: list[str], registered_name: str):
+    """등록 도메인 토큰에서 브랜드 사칭/타이포스쿼팅을 탐지."""
+    for tok in tokens:
+        for brand in KNOWN_BRANDS:
+            d = _levenshtein(tok, brand)
+            if d == 0 and registered_name != brand:
+                return ("impersonation", brand, tok, 0)
+            # 타이포스쿼팅: 4자 이상 토큰만 — 3자 토큰이 4자 브랜드와 거리 1로 오탐하는 것 방지
+            # (예: 'han' ≈ 'hana' 오탐 차단). 거리 2는 6자 이상 긴 브랜드에만 허용해
+            # 짧은 브랜드가 무관한 단어(예: 'canva')와 거리 2로 오탐하는 것을 막는다.
+            if (0 < d <= 2 and len(tok) >= 4 and len(brand) >= 4
+                    and abs(len(tok) - len(brand)) <= 2
+                    and (d == 1 or len(brand) >= 6)):
+                return ("typosquatting", brand, tok, d)
+            # 브랜드명이 토큰에 임베드(예: 'tosspay' ⊃ 'toss', 'shinhancard' ⊃ 'shinhan')
+            if (len(brand) >= 4 and brand in tok and tok != brand
+                    and registered_name != brand and len(tok) <= len(brand) + 10):
+                return ("impersonation", brand, tok, 0)
+    return None
+
+
+def _brand_in_subdomain(sub_tokens: list[str]):
+    """서브도메인 토큰에만 브랜드가 있는지(등록 도메인은 무관) — 브랜드-서브도메인 위장."""
+    for tok in sub_tokens:
+        for brand in KNOWN_BRANDS:
+            if tok == brand or (len(brand) >= 4 and brand in tok):
+                return (brand, tok)
+    return None
 
 
 def quick_assess(target: str) -> dict:
@@ -127,58 +192,65 @@ def quick_assess(target: str) -> dict:
 
     if kind == "url":
         host = _host_of(target)
-        labels = host.split(".") if host else []
-        registered = labels[-2] if len(labels) >= 2 else host
-        # TLD를 제외한 도메인 이름 부분을 하이픈/언더스코어/점 단위 토큰으로 분해
-        name_part = ".".join(labels[:-1]) if len(labels) >= 2 else host
-        tokens = [tok for tok in re.split(r"[.\-_]", name_part)
-                  if tok.isalnum() and len(tok) >= 3]
 
-        # 정상 도메인 화이트리스트 → 오탐 방지 (즉시 안전 판정)
+        # 정상 도메인 화이트리스트 → 오탐 방지 (즉시 안전 판정).
+        # 반드시 *원본 호스트*로 검사한다: 혼동문자로 위장한 'nаver.com'(키릴)은
+        # 스켈레톤이 'naver.com'이라도 화이트리스트를 통과하면 안 된다.
         if _is_allowlisted(host):
             return {"kind": kind, "risk_score": 0, "grade": "safe",
                     "reasons": [{"rule": "verified_domain", "weight": 0,
                                  "detail": "알려진 정상 도메인 (검증된 화이트리스트)"}]}
 
+        # 혼동/혼합 문자를 ASCII 스켈레톤으로 접어 토큰·브랜드 분석을 견고하게 한다
+        # (퓨니코드는 먼저 유니코드로 디코드). 비ASCII 위장이 없으면 skeleton == host.
+        decoded = decode_idna(host)
+        skeleton = confusable_skeleton(decoded)
+        analysis_host = skeleton or host
+
+        sub, reg_name, suffix, reg_domain = _registrable(analysis_host)
+        labels = analysis_host.split(".") if analysis_host else []
+        name_part = (sub + "." + reg_name).strip(".") if reg_name else analysis_host
+        tokens = _tokens(name_part)
+
+        # 퓨니코드(xn--) 사용 자체가 유명 브랜드 위장 신호
         if host.startswith("xn--") or ".xn--" in host:
             score += 35
-            reasons.append({"rule": "homograph", "weight": 35,
+            reasons.append({"rule": "homograph", "weight": 35, "confidence": 0.7,
                             "detail": "퓨니코드(xn--) 도메인 — 유명 브랜드 위장 가능성"})
 
-        # 혼동 문자(키릴/그리스 룩얼라이크)로 정상 도메인 위장 — 거의 확실한 악성 신호
+        # 혼동 문자(키릴/그리스/전각)·혼합 스크립트로 정상 도메인 위장 — 거의 확실한 악성.
+        # 스켈레톤이 화이트리스트와 일치하면 특정 브랜드를 노린 표적 위장 → 가중치 상향.
         if _has_confusable(host):
-            score += 40
-            reasons.append({"rule": "homoglyph", "weight": 40,
-                            "detail": "혼동 문자(키릴/그리스 알파벳)로 정상 도메인 위장"})
+            mimics = _is_allowlisted(skeleton)
+            w = 50 if mimics else 40
+            score += w
+            detail = (f"혼동/혼합 문자로 정상 도메인('{skeleton}') 위장 — 표적 피싱"
+                      if mimics else "혼동 문자·혼합 스크립트로 도메인 위장")
+            reasons.append({"rule": "homoglyph", "weight": w,
+                            "confidence": 0.97 if mimics else 0.9, "detail": detail})
 
-        # 브랜드 사칭(정확 일치) / 타이포스쿼팅(편집거리 1~2) — 토큰 단위
-        brand_hit = None
-        for tok in tokens:
-            for brand in KNOWN_BRANDS:
-                d = _levenshtein(tok, brand)
-                if d == 0 and registered != brand:
-                    brand_hit = ("impersonation", brand, tok, d)
-                    break
-                if 0 < d <= 2 and abs(len(tok) - len(brand)) <= 2:
-                    brand_hit = ("typosquatting", brand, tok, d)
-                    break
-                # 브랜드명이 토큰에 임베드(예: 'tosspay' ⊃ 'toss', 'shinhancard' ⊃ 'shinhan')
-                if (len(brand) >= 4 and brand in tok and tok != brand
-                        and registered != brand and len(tok) <= len(brand) + 10):
-                    brand_hit = ("impersonation", brand, tok, 0)
-                    break
-            if brand_hit:
-                break
-        if brand_hit:
-            hit_type, brand, tok, d = brand_hit
+        # 브랜드 사칭 — 등록 도메인 이름을 우선 검사(정확일치·임베드·타이포스쿼팅)
+        hit = _brand_hit(_tokens(reg_name), reg_name)
+        if hit:
+            hit_type, brand, tok, d = hit
             if hit_type == "impersonation":
                 score += 35
                 reasons.append({"rule": "brand_impersonation", "weight": 35,
+                                "confidence": 0.8,
                                 "detail": f"'{brand}' 브랜드명이 도메인에 포함되나 공식 도메인이 아님"})
             else:
                 score += 38
-                reasons.append({"rule": "typosquatting", "weight": 38,
+                reasons.append({"rule": "typosquatting", "weight": 38, "confidence": 0.85,
                                 "detail": f"'{tok}' ≈ '{brand}' (편집거리 {d}) — 유사 도메인 위장"})
+        else:
+            # 등록 도메인엔 없고 서브도메인에만 브랜드 → 실제 목적지는 다른 등록 도메인
+            sub_hit = _brand_in_subdomain(_tokens(sub))
+            if sub_hit:
+                brand, tok = sub_hit
+                score += 30
+                reasons.append({"rule": "brand_subdomain", "weight": 30, "confidence": 0.8,
+                                "detail": f"'{brand}' 브랜드가 서브도메인에만 있고 실제 등록 "
+                                          f"도메인은 '{reg_domain}' — 목적지 위장"})
 
         tld = labels[-1] if labels else ""
         if tld in SUSPICIOUS_TLDS:
@@ -208,15 +280,40 @@ def quick_assess(target: str) -> dict:
             reasons.append({"rule": "hyphen_heavy", "weight": 10,
                             "detail": f"하이픈 과다({hyphen_count}) — 키워드 조합 위장"})
 
-        if re.fullmatch(r"[0-9.]+", host):
+        # IP 주소 표기 — 점10진(ip_host) 또는 정수/16진 인코딩(obfuscated_ip)
+        ip_form = ip_representation(host)
+        if ip_form == "dotted":
             score += 30
-            reasons.append({"rule": "ip_host", "weight": 30,
+            reasons.append({"rule": "ip_host", "weight": 30, "confidence": 0.85,
                             "detail": "도메인 대신 IP 주소 사용"})
+        elif ip_form in ("decimal", "hex"):
+            score += 30
+            reasons.append({"rule": "obfuscated_ip", "weight": 30, "confidence": 0.9,
+                            "detail": f"IP 주소를 {ip_form}로 인코딩 — 목적지 은폐"})
+
+        # 알려진 URL 단축 서비스 — 실제 목적지를 감춘다(양날의 검이라 가중치는 보수적)
+        if is_shortener(reg_domain, host):
+            score += 20
+            reasons.append({"rule": "url_shortener", "weight": 20, "confidence": 0.5,
+                            "detail": f"URL 단축 서비스({reg_domain}) — 실제 목적지 은폐"})
 
         if "@" in target:
             score += 25
-            reasons.append({"rule": "at_symbol", "weight": 25,
+            reasons.append({"rule": "at_symbol", "weight": 25, "confidence": 0.7,
                             "detail": "URL 내 '@' — 실제 목적지 은폐 기법"})
+
+        # 이중/중첩 퍼센트 인코딩 — 필터 우회·목적지 은폐
+        if has_double_encoding(target):
+            score += 18
+            reasons.append({"rule": "double_encoding", "weight": 18, "confidence": 0.7,
+                            "detail": "이중 URL 인코딩(%25XX) — 필터 우회 시도"})
+
+        # 비표준 포트 — 정상 서비스는 80/443 사용
+        port = nonstandard_port(target)
+        if port is not None:
+            score += 12
+            reasons.append({"rule": "nonstandard_port", "weight": 12, "confidence": 0.45,
+                            "detail": f"비표준 포트(:{port}) 사용"})
 
         if len(labels) >= 5:
             score += 15
@@ -239,7 +336,8 @@ def quick_assess(target: str) -> dict:
             score += 20
             reasons.append({"rule": "voip_prefix", "weight": 20,
                             "detail": "인터넷전화(070/050) 번호 — 발신 위장에 자주 사용"})
-        if digits.startswith(("00", "+")):
+        # 국제전화: 원본의 선행 '+' 또는 국제 접속번호 '00' (digits 에선 '+'가 제거되므로 원본도 확인)
+        if target.strip().startswith("+") or digits.startswith("00"):
             score += 15
             reasons.append({"rule": "intl_prefix", "weight": 15,
                             "detail": "국제전화 발신"})

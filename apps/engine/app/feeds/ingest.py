@@ -6,10 +6,21 @@ from __future__ import annotations
 
 from .abusech import ThreatFoxSource, URLhausSource
 from .base import Indicator
+from .crt_sh import CrtShSource
 from .openphish import OpenPhishSource
+from .phishtank import PhishTankSource
 from .police_kr import PoliceKrSource
+from .urlscan import UrlScanSource
 
-SOURCES = [OpenPhishSource(), URLhausSource(), ThreatFoxSource(), PoliceKrSource()]
+SOURCES = [
+    OpenPhishSource(),
+    URLhausSource(),
+    ThreatFoxSource(),
+    PoliceKrSource(),
+    CrtShSource(),
+    UrlScanSource(),
+    PhishTankSource(),
+]
 
 # 그래프 가독성 상한 — 관계망에 올릴 지표 수(블록리스트는 전량 저장).
 GRAPH_CAP = 28

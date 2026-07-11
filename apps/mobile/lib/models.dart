@@ -95,6 +95,7 @@ class CheckResult {
     required this.checkedAt,
     this.riskScore,
     this.organization,
+    this.offline = false,
   });
 
   final String value;
@@ -113,6 +114,10 @@ class CheckResult {
 
   /// 클라이언트에서 검사한 시각 (히스토리 정렬/표시용).
   final DateTime checkedAt;
+
+  /// 온‑디바이스 오프라인 규칙 엔진으로 판정했는지 (게이트웨이 폴백/공유 검사).
+  /// 게이트웨이 응답이면 false.
+  final bool offline;
 
   String get kindKorean {
     switch (kind) {
@@ -148,6 +153,7 @@ class CheckResult {
       organization: json['organization']?.toString(),
       recommendation: (json['recommendation'] ?? '').toString(),
       checkedAt: parsedCheckedAt,
+      offline: json['offline'] == true,
     );
   }
 
@@ -161,5 +167,6 @@ class CheckResult {
         'organization': organization,
         'recommendation': recommendation,
         'checked_at': checkedAt.toIso8601String(),
+        'offline': offline,
       };
 }

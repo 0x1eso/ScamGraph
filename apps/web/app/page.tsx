@@ -10,6 +10,9 @@ import WhyScamGraph from "./components/WhyScamGraph";
 import DataSourcesPanel from "./components/DataSourcesPanel";
 import ThreatTicker from "./components/ThreatTicker";
 import TrendStrip from "./components/TrendStrip";
+import Observatory from "./components/Observatory";
+import WatchlistPanel from "./components/WatchlistPanel";
+import AppealForm from "./components/AppealForm";
 import Reveal from "./components/Reveal";
 
 const SERVICES = [
@@ -70,6 +73,11 @@ export default function Home() {
         <CommandCenter />
 
         <Reveal>
+          <div className="section-label">// 그래프 관제 · 조직 단위 분석</div>
+          <Observatory />
+        </Reveal>
+
+        <Reveal>
           <WhyScamGraph />
         </Reveal>
 
@@ -101,6 +109,16 @@ export default function Home() {
 
         <Reveal>
           <ApiCallout />
+        </Reveal>
+
+        <Reveal>
+          <div className="section-label">// 선제 감시 · 시민 참여</div>
+          <WatchlistPanel />
+        </Reveal>
+
+        <Reveal>
+          <div className="section-label">// 정정 창구</div>
+          <AppealForm />
         </Reveal>
       </div>
 

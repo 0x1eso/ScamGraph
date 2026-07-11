@@ -11,12 +11,19 @@ import pytest
 
 from app.feeds.abusech import ThreatFoxSource, URLhausSource
 from app.feeds.base import Indicator, host_of
+from app.feeds.brands import looks_like_impersonation, matched_brand
+from app.feeds.crt_sh import CrtShSource
 from app.feeds.ingest import GRAPH_CAP, SOURCES, collect
 from app.feeds.openphish import OpenPhishSource
+from app.feeds.phishtank import PhishTankSource
 from app.feeds.police_kr import PoliceKrSource
 from app.feeds.seed import SEED
+from app.feeds.urlscan import UrlScanSource
 
-_ALL_SOURCES = {"openphish", "urlhaus", "threatfox", "police_kr"}
+_ALL_SOURCES = {
+    "openphish", "urlhaus", "threatfox", "police_kr",
+    "crt_sh", "urlscan", "phishtank",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -62,6 +69,28 @@ def test_police_kr_is_gov_source():
     assert all(i.source_kind == "gov" for i in items)
 
 
+def test_crt_sh_falls_back_to_seed_offline():
+    assert CrtShSource().fetch() == SEED["crt_sh"]
+
+
+def test_urlscan_falls_back_to_seed_offline():
+    assert UrlScanSource().fetch() == SEED["urlscan"]
+
+
+def test_phishtank_falls_back_to_seed_without_key():
+    # 앱 키가 없으면(테스트 환경) 네트워크 없이 시드로 폴백.
+    assert PhishTankSource().fetch() == SEED["phishtank"]
+
+
+def test_brand_impersonation_detection():
+    # 브랜드 + 의심 토큰 → 사칭, 공식 도메인 → 제외.
+    assert looks_like_impersonation("toss-secure-cert.top") == "toss"
+    assert matched_brand("naver-mail-secure.top") == "naver"
+    assert matched_brand("toss.im") is None
+    assert matched_brand("www.shinhan.com") is None
+    assert looks_like_impersonation("example.org") is None
+
+
 def test_collect_covers_all_sources_and_dedups():
     items = collect()
     got = {i.source for i in items}
@@ -79,4 +108,4 @@ def test_shared_ip_cluster_exists():
 
 def test_ingest_config():
     assert GRAPH_CAP > 0
-    assert len(SOURCES) == 4
+    assert len(SOURCES) == 7

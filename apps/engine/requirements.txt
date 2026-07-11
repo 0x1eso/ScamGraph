@@ -11,3 +11,4 @@ meilisearch==0.33.0
 tldextract==5.1.3
 beautifulsoup4==4.12.3
 psycopg2-binary==2.9.10
+prometheus-client==0.21.1

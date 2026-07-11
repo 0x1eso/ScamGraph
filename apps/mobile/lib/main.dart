@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'app_state.dart';
 import 'notifications.dart';
+import 'screens/family_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/manual_check_screen.dart';
 import 'screens/settings_screen.dart';
+import 'share_handler.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -17,23 +19,41 @@ Future<void> main() async {
   runApp(ScamGraphApp(appState: appState));
 }
 
-class ScamGraphApp extends StatelessWidget {
+class ScamGraphApp extends StatefulWidget {
   const ScamGraphApp({super.key, required this.appState});
 
   final AppState appState;
+
+  @override
+  State<ScamGraphApp> createState() => _ScamGraphAppState();
+}
+
+class _ScamGraphAppState extends State<ScamGraphApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  late final ShareHandler _shareHandler;
+
+  @override
+  void initState() {
+    super.initState();
+    // 다른 앱에서 공유(ACTION_SEND)로 넘어온 URL/텍스트를 검사 화면으로 라우팅.
+    _shareHandler =
+        ShareHandler(navigatorKey: _navigatorKey, appState: widget.appState);
+    _shareHandler.start();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ScamGraph',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       theme: buildScamTheme(),
-      home: HomeShell(appState: appState),
+      home: HomeShell(appState: widget.appState),
     );
   }
 }
 
-/// 하단 내비게이션 셸: 검사 / 히스토리 / 설정.
+/// 하단 내비게이션 셸: 검사 / 기록 / 가족 / 설정.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.appState});
 
@@ -52,6 +72,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       ManualCheckScreen(appState: appState),
       HistoryScreen(appState: appState),
+      FamilyScreen(appState: appState),
       SettingsScreen(appState: appState),
     ];
 
@@ -72,6 +93,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: '기록',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: '가족',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

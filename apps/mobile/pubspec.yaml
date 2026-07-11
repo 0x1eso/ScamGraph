@@ -15,7 +15,12 @@ dependencies:
   flutter_local_notifications: ^17.2.2
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
+  # 오프라인 규칙엔진이 읽는 번들 규칙 정의 (contracts/rules.json 미러 + phish/allowlist).
+  assets:
+    - assets/rules.json

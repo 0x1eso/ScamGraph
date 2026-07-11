@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ScamGraph 상세</title>
+    <link rel="stylesheet" href="ui.css" />
+    <style>
+      body { font-size: 13px; }
+      .wrap { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+      .hd { display: flex; align-items: center; gap: 8px; }
+      .hd .logo { font-size: 18px; }
+      .hd b { color: var(--accent); }
+      .target {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: var(--bg-card);
+      }
+      .target .host { font: 600 13px/1.4 var(--mono); word-break: break-all; }
+      .target .puny { font: 500 11px/1.4 var(--mono); color: var(--text-mute); margin-top: 3px; }
+      .verdict {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .verdict .score { font: 700 26px/1 var(--mono); }
+      .reco {
+        border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 12px;
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .block h3 {
+        font: 700 10.5px/1 var(--mono);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--text-mute);
+        margin-bottom: 8px;
+      }
+      ul.reasons { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+      ul.reasons li {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 9px 11px;
+        background: var(--bg-elev);
+        color: var(--text-dim);
+        font-size: 12.5px;
+        line-height: 1.45;
+      }
+      ul.reasons li b { color: var(--text); }
+      .kv { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 11px;
+        font: 600 11.5px/1 var(--mono);
+        color: var(--text-dim);
+        background: var(--bg-elev);
+      }
+      .chip b { color: var(--accent); }
+      .muted { color: var(--text-mute); }
+      .status { font-size: 12px; color: var(--text-mute); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="hd"><span class="logo">🛡️</span><span>Scam<b>Graph</b> 상세 분석</span></div>
+
+      <div class="target">
+        <div class="host" id="host">현재 사이트 확인 중…</div>
+        <div class="puny" id="puny" hidden></div>
+        <div class="verdict">
+          <span class="pill unknown" id="gradePill"><span class="dot"></span><span id="gradeText">판정 중</span></span>
+          <span class="score muted" id="score">–</span>
+        </div>
+      </div>
+
+      <div class="reco" id="reco">현재 사이트를 게이트웨이로 상세 분석합니다…</div>
+
+      <div class="block">
+        <h3>귀속 · 피드 · 커뮤니티</h3>
+        <div class="kv" id="chips"><span class="chip muted">불러오는 중…</span></div>
+      </div>
+
+      <div class="block">
+        <h3>판정 근거</h3>
+        <ul class="reasons" id="reasons"><li class="muted">근거를 불러오는 중…</li></ul>
+      </div>
+
+      <button class="btn ghost" id="recheck">다시 분석</button>
+      <div class="status" id="status"></div>
+    </div>
+
+    <script src="lib/heuristics.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

@@ -1,363 +1,207 @@
-// ScamGraph popup logic.
-// Reads the active tab's hostname, asks the background worker to scan it, and
-// renders a risk gauge + grade + top reasons. When the grade is warning/danger
-// it also offers a community report button (the flywheel) and a compact
-// post-detection action guide. All gateway failures degrade to a friendly
-// Korean message, and the report/guide sections simply stay hidden on failure —
-// they never break the popup.
+// ScamGraph popup — current tab verdict, blocklist status, explicit re-check.
+//
+// The LOCAL verdict (blocklist + heuristics) renders instantly with NO network.
+// A server round-trip happens only when the user explicitly presses 상세검사/신고.
+(function () {
+  "use strict";
 
-const GRADE_META = {
-  danger: { color: "#ff4d6d", label: "위험", caption: "즉시 이용을 중단하세요" },
-  warning: { color: "#ffb020", label: "경고", caption: "주의가 필요합니다" },
-  caution: { color: "#ffb020", label: "주의", caption: "확인이 필요합니다" },
-  safe: { color: "#00e5c0", label: "안전", caption: "특이사항이 없습니다" },
-};
+  const H = self.SGHeuristics;
+  const $ = (id) => document.getElementById(id);
 
-const hostEl = document.getElementById("host");
-const scanBtn = document.getElementById("scan-btn");
-const resultEl = document.getElementById("result");
+  const LEVEL_LABEL = { standard: "표준 보호", strict: "엄격 보호", monitor: "모니터만" };
+  const GRADE_LABEL = {
+    danger: "위험",
+    warning: "경고",
+    caution: "주의",
+    safe: "안전",
+    unknown: "판정불가",
+  };
+  const LOCAL_LABEL = { danger: "위험", warning: "경고", caution: "주의", safe: "안전" };
 
-let currentHost = null;
-// Bumped on every scan so stale async callbacks (guidance) don't append to a
-// result that has since been re-rendered.
-let activeScanToken = 0;
+  let currentTab = null;
+  let currentHost = "";
 
-function setStatus(text, isError) {
-  resultEl.innerHTML = "";
-  const div = document.createElement("div");
-  div.className = isError ? "status error" : "status";
-  div.textContent = text;
-  resultEl.appendChild(div);
-}
+  function send(message) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(message, (res) => {
+          if (chrome.runtime.lastError) return resolve({ error: chrome.runtime.lastError.message });
+          resolve(res || {});
+        });
+      } catch (_e) {
+        resolve({ error: "context invalidated" });
+      }
+    });
+  }
 
-function escapeText(value) {
-  // textContent assignment already escapes; this helper just coerces to string.
-  return value == null ? "" : String(value);
-}
+  function setPill(el, textEl, level, label) {
+    el.className = "pill " + level;
+    textEl.textContent = label;
+  }
 
-// Only allow navigable protocols on gateway-supplied links (defense in depth
-// against a javascript: URL slipping into an <a href>).
-function isSafeHref(href) {
-  return typeof href === "string" && /^(https?:|tel:)/i.test(href.trim());
-}
+  function relTime(ts) {
+    if (!ts) return "없음";
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "방금 전";
+    if (min < 60) return min + "분 전";
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + "시간 전";
+    return Math.floor(hr / 24) + "일 전";
+  }
 
-function renderResult(result, token) {
-  const grade = result.grade || "safe";
-  const meta = GRADE_META[grade] || GRADE_META.safe;
-  const score =
-    typeof result.risk_score === "number" ? Math.round(result.risk_score) : 0;
+  async function loadLocalVerdict() {
+    const { blocklist } = await chrome.storage.local.get("blocklist");
+    const map = new Map();
+    for (const e of blocklist || []) {
+      if (e && e.kind === "domain") map.set(H.normalizeHost(e.value), { severity: e.severity, source: e.source });
+    }
+    const index = { get: (d) => map.get(d) || null };
+    const verdict = H.assess(currentHost, index);
 
-  resultEl.innerHTML = "";
+    $("host").textContent = verdict.unicodeHost || currentHost || "(로컬 페이지)";
+    if (verdict.unicodeHost && verdict.unicodeHost !== verdict.host) {
+      $("puny").hidden = false;
+      $("puny").textContent = "퓨니코드: " + verdict.host;
+    }
+    setPill($("localPill"), $("localText"), verdict.level, LOCAL_LABEL[verdict.level] || "안전");
+    if (verdict.reasons.length) {
+      $("note").textContent = verdict.reasons[0].label;
+    } else {
+      $("note").textContent = "로컬 목록/휴리스틱상 특이 신호 없음. 필요 시 상세검사 하세요.";
+    }
+  }
 
-  // Gauge: score ring + grade block.
-  const gauge = document.createElement("div");
-  gauge.className = "gauge";
+  async function loadStatus() {
+    const res = await send({ type: "status" });
+    if (res.error) return;
+    const meta = res.meta || {};
+    const level = (res.settings && res.settings.level) || "standard";
+    const stats = res.stats || {};
 
-  const ring = document.createElement("div");
-  ring.className = "score-ring";
-  ring.style.setProperty("--pct", String(Math.max(0, Math.min(100, score))));
-  ring.style.setProperty("--ring-color", meta.color);
-  const scoreNum = document.createElement("span");
-  scoreNum.className = "score-num";
-  scoreNum.textContent = String(score);
-  ring.appendChild(scoreNum);
-  gauge.appendChild(ring);
+    setPill($("levelPill"), $("levelText"), level === "monitor" ? "unknown" : "safe", LEVEL_LABEL[level] || level);
+    $("blVersion").textContent = meta.version
+      ? meta.version + (meta.count != null ? " · " + meta.count + "개" : "")
+      : "미동기화";
+    $("blSync").textContent = meta.ok === false
+      ? "실패 · 마지막 정상본 사용"
+      : relTime(meta.syncedAt);
+    $("blockedToday").textContent = String(stats.blockedToday || 0);
+  }
 
-  const gradeBlock = document.createElement("div");
-  gradeBlock.className = "grade-block";
-  const gradeLabel = document.createElement("span");
-  gradeLabel.className = "grade-label";
-  gradeLabel.style.color = meta.color;
-  gradeLabel.textContent = meta.label;
-  const gradeCaption = document.createElement("span");
-  gradeCaption.className = "grade-caption";
-  gradeCaption.textContent = meta.caption;
-  gradeBlock.appendChild(gradeLabel);
-  gradeBlock.appendChild(gradeCaption);
-  gauge.appendChild(gradeBlock);
+  function renderDetail(data) {
+    $("detail").classList.add("show");
+    const grade = data.grade || "unknown";
+    setPill($("gradePill"), $("gradeText"), grade, GRADE_LABEL[grade] || grade);
+    $("score").textContent = typeof data.risk_score === "number" ? String(Math.round(data.risk_score)) : "–";
+    $("score").className = "score";
+    $("reco").textContent = data.recommendation || "";
 
-  resultEl.appendChild(gauge);
-
-  // Top reasons (up to 4).
-  const reasons = Array.isArray(result.reasons) ? result.reasons.slice(0, 4) : [];
-  if (reasons.length > 0) {
-    const list = document.createElement("ul");
-    list.className = "reasons";
-    reasons.forEach(function (reason) {
+    const ul = $("reasons");
+    ul.innerHTML = "";
+    const reasons = Array.isArray(data.reasons) ? data.reasons : [];
+    for (const r of reasons.slice(0, 6)) {
       const li = document.createElement("li");
-
-      const left = document.createElement("div");
-      const rule = document.createElement("div");
-      rule.className = "rule";
-      rule.textContent = escapeText(reason.rule || "규칙");
-      const detail = document.createElement("div");
-      detail.className = "detail";
-      detail.textContent = escapeText(reason.detail || "");
-      left.appendChild(rule);
-      if (reason.detail) {
-        left.appendChild(detail);
-      }
-
-      const weight = document.createElement("span");
-      weight.className = "weight";
-      weight.textContent =
-        reason.weight != null ? "+" + escapeText(reason.weight) : "";
-
-      li.appendChild(left);
-      li.appendChild(weight);
-      list.appendChild(li);
-    });
-    resultEl.appendChild(list);
-  }
-
-  // Post-detection: only the actionable grades get the report button + guide.
-  if (grade === "warning" || grade === "danger") {
-    renderPostDetection(result, grade, token);
-  }
-}
-
-// Renders the community report button and kicks off the async guidance fetch.
-function renderPostDetection(result, grade, token) {
-  const kind = result.kind || "";
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-
-  const reportBtn = document.createElement("button");
-  reportBtn.type = "button";
-  reportBtn.className = "report-btn";
-  reportBtn.textContent = "🚩 사기 신고";
-  reportBtn.addEventListener("click", function () {
-    submitReport(reportBtn, actions, currentHost, kind);
-  });
-  actions.appendChild(reportBtn);
-  resultEl.appendChild(actions);
-
-  loadGuidance(kind, grade, token);
-}
-
-// Sends the report to the community feed. On success the button is replaced
-// with the flywheel confirmation ("커뮤니티 N건"); on failure it re-enables so
-// the user can retry — nothing else changes.
-function submitReport(btn, container, target, kind) {
-  if (!target) {
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = "신고 중…";
-
-  function restore() {
-    btn.disabled = false;
-    btn.textContent = "🚩 사기 신고";
-  }
-
-  try {
-    chrome.runtime.sendMessage(
-      { type: "report", target: target, kind: kind, note: "" },
-      function (result) {
-        if (chrome.runtime.lastError || !result || result.error) {
-          restore();
-          return;
-        }
-        showReportDone(btn, container, result);
-      }
-    );
-  } catch (_err) {
-    restore();
-  }
-}
-
-function showReportDone(btn, container, result) {
-  btn.remove();
-  const done = document.createElement("div");
-  done.className = "report-done";
-  const count = typeof result.reports === "number" ? result.reports : null;
-  done.textContent =
-    count != null ? "✅ 신고 완료 · 커뮤니티 " + count + "건" : "✅ 신고 완료";
-  container.appendChild(done);
-}
-
-// Fetches "what to do now" guidance. Silent on any failure (section hidden).
-function loadGuidance(kind, grade, token) {
-  try {
-    chrome.runtime.sendMessage(
-      { type: "guidance", kind: kind, grade: grade },
-      function (result) {
-        // Drop stale responses from a superseded scan.
-        if (token !== activeScanToken) {
-          return;
-        }
-        if (chrome.runtime.lastError || !result || result.error) {
-          return;
-        }
-        renderGuidance(result);
-      }
-    );
-  } catch (_err) {
-    // Stay silent: the guide is a bonus, never a blocker.
-  }
-}
-
-function renderGuidance(guidance) {
-  const steps = Array.isArray(guidance.steps) ? guidance.steps : [];
-  const hotlines = Array.isArray(guidance.hotlines) ? guidance.hotlines : [];
-  if (steps.length === 0 && hotlines.length === 0) {
-    return;
-  }
-
-  const section = document.createElement("section");
-  section.className = "guide";
-
-  const heading = document.createElement("div");
-  heading.className = "guide-title";
-  heading.textContent = "🆘 지금 할 일";
-  section.appendChild(heading);
-
-  if (guidance.headline) {
-    const headline = document.createElement("div");
-    headline.className = "guide-headline";
-    headline.textContent = escapeText(guidance.headline);
-    section.appendChild(headline);
-  }
-
-  if (steps.length > 0) {
-    const ol = document.createElement("ol");
-    ol.className = "guide-steps";
-    steps.slice(0, 5).forEach(function (step) {
-      if (!step) {
-        return;
-      }
+      li.textContent = reasonText(r);
+      ul.appendChild(li);
+    }
+    if (data.organization) {
       const li = document.createElement("li");
-
-      const title = document.createElement("div");
-      title.className = "step-title";
-      title.textContent = escapeText(step.title || "");
-      li.appendChild(title);
-
-      if (step.detail) {
-        const detail = document.createElement("div");
-        detail.className = "step-detail";
-        detail.textContent = escapeText(step.detail);
-        li.appendChild(detail);
-      }
-
-      const action = step.action;
-      if (action && action.label && isSafeHref(action.href)) {
-        const a = document.createElement("a");
-        a.className = "step-action";
-        a.textContent = escapeText(action.label);
-        a.href = action.href;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        li.appendChild(a);
-      }
-
-      ol.appendChild(li);
-    });
-    section.appendChild(ol);
+      li.textContent = "귀속 조직: " + data.organization;
+      ul.appendChild(li);
+    }
+    if (Array.isArray(data.feed_sources) && data.feed_sources.length) {
+      const li = document.createElement("li");
+      li.textContent = "위협 피드: " + data.feed_sources.join(", ");
+      ul.appendChild(li);
+    }
+    if (typeof data.community_reports === "number" && data.community_reports > 0) {
+      const li = document.createElement("li");
+      li.textContent = "커뮤니티 신고 " + data.community_reports + "건";
+      ul.appendChild(li);
+    }
   }
 
-  if (hotlines.length > 0) {
-    const hotWrap = document.createElement("div");
-    hotWrap.className = "hotlines";
-    hotlines.slice(0, 4).forEach(function (hotline) {
-      if (!hotline || !hotline.contact) {
-        return;
-      }
-      const a = document.createElement("a");
-      a.className = "hotline";
-      a.href = "tel:" + String(hotline.contact).replace(/[^0-9+]/g, "");
-
-      const name = document.createElement("span");
-      name.className = "hotline-name";
-      name.textContent = escapeText(hotline.name || "신고 전화");
-
-      const contact = document.createElement("span");
-      contact.className = "hotline-contact";
-      contact.textContent = escapeText(hotline.contact);
-
-      a.appendChild(name);
-      a.appendChild(contact);
-      hotWrap.appendChild(a);
-    });
-    section.appendChild(hotWrap);
+  function reasonText(r) {
+    if (typeof r === "string") return r;
+    if (r && typeof r === "object") {
+      return r.label || r.detail || r.rule || JSON.stringify(r);
+    }
+    return String(r);
   }
 
-  resultEl.appendChild(section);
-}
-
-function requestScan() {
-  if (!currentHost) {
-    setStatus("검사할 사이트를 찾을 수 없습니다.", true);
-    return;
-  }
-
-  activeScanToken += 1;
-  const token = activeScanToken;
-
-  scanBtn.disabled = true;
-  setStatus("검사 중…", false);
-
-  try {
-    chrome.runtime.sendMessage(
-      { type: "scan", target: currentHost },
-      function (result) {
-        scanBtn.disabled = false;
-
-        // Ignore a scan response that a newer scan has already superseded.
-        if (token !== activeScanToken) {
-          return;
-        }
-        if (chrome.runtime.lastError) {
-          setStatus("게이트웨이에 연결할 수 없습니다.", true);
-          return;
-        }
-        if (!result || result.error) {
-          setStatus("게이트웨이에 연결할 수 없습니다.", true);
-          return;
-        }
-        renderResult(result, token);
-      }
-    );
-  } catch (_err) {
-    scanBtn.disabled = false;
-    setStatus("게이트웨이에 연결할 수 없습니다.", true);
-  }
-}
-
-function init() {
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    const tab = tabs && tabs[0];
-    if (!tab || !tab.url) {
-      hostEl.textContent = "—";
-      setStatus("현재 탭 정보를 읽을 수 없습니다.", true);
-      scanBtn.disabled = true;
+  async function onInspect() {
+    const target = currentTab && currentTab.url ? currentTab.url : currentHost;
+    if (!target) return;
+    $("inspect").disabled = true;
+    $("inspect").textContent = "검사 중…";
+    const res = await send({ type: "check", value: target });
+    $("inspect").disabled = false;
+    $("inspect").textContent = "이 페이지 상세검사";
+    if (res.error) {
+      $("detail").classList.add("show");
+      $("reco").textContent = "게이트웨이(localhost:8080)에 연결할 수 없습니다. 로컬 판정만 사용하세요.";
+      $("reasons").innerHTML = "";
+      setPill($("gradePill"), $("gradeText"), "unknown", "오프라인");
+      $("score").textContent = "–";
       return;
     }
+    renderDetail(res);
+  }
 
-    let host = null;
+  async function onReport() {
+    if (!currentHost) return;
+    $("report").disabled = true;
+    const res = await send({ type: "report", target: currentHost, kind: "url", note: "확장 팝업 신고" });
+    $("report").disabled = false;
+    $("report").textContent = res.error ? "신고 보류" : "신고됨 ✓";
+    setTimeout(() => ($("report").textContent = "신고"), 2200);
+  }
+
+  async function onSync() {
+    $("sync").disabled = true;
+    $("sync").textContent = "동기화 중…";
+    await send({ type: "sync" });
+    await loadStatus();
+    await loadLocalVerdict();
+    $("sync").disabled = false;
+    $("sync").textContent = "지금 동기화";
+  }
+
+  async function onPanel() {
     try {
-      const url = new URL(tab.url);
-      if (url.protocol === "http:" || url.protocol === "https:") {
-        host = url.hostname;
+      if (currentTab && currentTab.windowId != null) {
+        await chrome.sidePanel.open({ windowId: currentTab.windowId });
+        window.close();
       }
-    } catch (_err) {
-      host = null;
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+
+  async function init() {
+    $("inspect").addEventListener("click", onInspect);
+    $("report").addEventListener("click", onReport);
+    $("sync").addEventListener("click", onSync);
+    $("panel").addEventListener("click", onPanel);
+    $("options").addEventListener("click", () => chrome.runtime.openOptionsPage());
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      currentTab = tab || null;
+      if (tab && tab.url) {
+        try {
+          currentHost = new URL(tab.url).hostname;
+        } catch (_e) {
+          currentHost = "";
+        }
+      }
+    } catch (_e) {
+      /* tabs unavailable */
     }
 
-    if (!host) {
-      hostEl.textContent = "검사할 수 없는 페이지";
-      setStatus("이 페이지는 검사 대상이 아닙니다.", false);
-      scanBtn.disabled = true;
-      return;
-    }
+    await Promise.all([loadLocalVerdict(), loadStatus()]);
+  }
 
-    currentHost = host;
-    hostEl.textContent = host;
-  });
-
-  scanBtn.addEventListener("click", requestScan);
-}
-
-document.addEventListener("DOMContentLoaded", init);
+  init();
+})();

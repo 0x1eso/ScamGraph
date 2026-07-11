@@ -1,0 +1,14 @@
+# Grafana 대시보드 자동 프로비저닝 — 파일 프로바이더
+apiVersion: 1
+
+providers:
+  - name: ScamGraph
+    orgId: 1
+    folder: ScamGraph
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 15
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

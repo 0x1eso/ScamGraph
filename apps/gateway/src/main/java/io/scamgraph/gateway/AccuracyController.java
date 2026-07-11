@@ -42,14 +42,14 @@ public class AccuracyController {
             // 엔진 미가동 → 시드 폴백
         }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("samples", 91);
-        out.put("scam_samples", 49);
-        out.put("legit_samples", 42);
-        out.put("accuracy", 0.956);
+        out.put("samples", 165);
+        out.put("scam_samples", 85);
+        out.put("legit_samples", 80);
+        out.put("accuracy", 0.964);
         out.put("precision", 1.0);
-        out.put("recall", 0.918);
-        out.put("f1", 0.957);
-        out.put("confusion", Map.of("tp", 45, "fp", 0, "tn", 42, "fn", 4));
+        out.put("recall", 0.929);
+        out.put("f1", 0.9634);
+        out.put("confusion", Map.of("tp", 79, "fp", 0, "tn", 80, "fn", 6));
         out.put("operating_point", "grade>=caution");
         return out;
     }

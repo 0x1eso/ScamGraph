@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .crawler import quick_assess
+from .metrics import setup_metrics
 
 
 @asynccontextmanager
@@ -33,6 +34,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 관측성 — 요청 카운트/스캔 지연 메트릭 미들웨어 + /metrics 노출(프로메테우스 스크레이프)
+setup_metrics(app)
 
 
 class ScanRequest(BaseModel):

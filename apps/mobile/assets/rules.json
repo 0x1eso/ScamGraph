@@ -1,0 +1,60 @@
+{
+  "$comment": "번들된 오프라인 규칙 정의. contracts/rules.json 을 그대로 미러링하고(규칙ID·가중치·설명·등급 임계값), 파이썬 엔진(apps/engine/app/crawler.py + app/signals/*)이 코드에 갖고 있는 phish_keywords·allowlist·phishing_keyword_scoring 을 추가로 담는다. contracts/rules.json 이 갱신되면 이 파일도 동기화해야 한다(golden 테스트가 두 구현의 판정 일치를 검증). 가중치는 contract 를 권위 소스로 따른다.",
+  "version": "2026.07.1",
+  "grade_thresholds": { "danger": 70, "warning": 35, "caution": 15, "safe": 0 },
+  "grades_considered_scam": ["caution", "warning", "danger"],
+  "url_rules": [
+    { "id": "verified_domain", "weight": 0, "detail": "알려진 정상 도메인 (검증된 화이트리스트)", "note": "allowlist 매칭 시 즉시 safe 반환" },
+    { "id": "homograph", "weight": 35, "detail": "퓨니코드(xn--) 도메인 — 유명 브랜드 위장 가능성" },
+    { "id": "homoglyph", "weight": 40, "detail": "혼동 문자(키릴/그리스 알파벳)로 정상 도메인 위장" },
+    { "id": "brand_impersonation", "weight": 35, "detail": "브랜드명이 도메인에 포함되나 공식 도메인이 아님 (정확일치·임베드)" },
+    { "id": "typosquatting", "weight": 38, "detail": "브랜드와 편집거리 1~2 — 유사 도메인 위장" },
+    { "id": "suspicious_tld", "weight": 22, "detail": "위험 TLD" },
+    { "id": "phishing_keywords", "weight": "16~30", "detail": "피싱 유도 키워드(개수 비례 가산, 상한 30)" },
+    { "id": "digit_heavy", "weight": 10, "detail": "도메인에 숫자 과다(≥4) — 자동 생성 흔적" },
+    { "id": "hyphen_heavy", "weight": 10, "detail": "하이픈 과다(≥3) — 키워드 조합 위장" },
+    { "id": "ip_host", "weight": 30, "detail": "도메인 대신 IP 주소 사용" },
+    { "id": "at_symbol", "weight": 25, "detail": "URL 내 '@' — 실제 목적지 은폐 기법" },
+    { "id": "deep_subdomain", "weight": 15, "detail": "과도한 서브도메인 깊이(≥5)" },
+    { "id": "long_url", "weight": 10, "detail": "비정상적으로 긴 URL(≥75)" },
+    { "id": "no_tls", "weight": 8, "detail": "HTTPS 미사용" },
+    { "id": "brand_subdomain", "weight": 30, "detail": "브랜드가 서브도메인에만 있고 등록 도메인은 다름 — 브랜드-서브도메인 위장" },
+    { "id": "obfuscated_ip", "weight": 30, "detail": "IP 주소를 10진수/16진수로 인코딩(우회)" },
+    { "id": "url_shortener", "weight": 12, "detail": "단축 URL — 실제 목적지 은폐(bit.ly/tinyurl/is.gd/han.gl/buly.kr 등)" },
+    { "id": "double_encoding", "weight": 12, "detail": "이중 percent-encoding(%25XX) — 필터 우회" },
+    { "id": "nonstandard_port", "weight": 10, "detail": "비표준 포트 사용" }
+  ],
+  "$homoglyph_note": "homoglyph 는 동적 가중치: 스켈레톤이 화이트리스트 브랜드와 일치(표적 위장)하면 40→50. reason 에는 confidence(0~1) 를 함께 첨부.",
+  "phone_rules": [
+    { "id": "voip_prefix", "weight": 20, "detail": "인터넷전화(070/050) 번호 — 발신 위장에 자주 사용" },
+    { "id": "intl_prefix", "weight": 15, "detail": "국제전화 발신(00/+)" }
+  ],
+  "account_rules": [
+    { "id": "account_lookup", "weight": 0, "detail": "커뮤니티 신고 DB 대조 필요", "note": "quick_assess 단독 판정 불가 — 서버 대조" }
+  ],
+  "constants": {
+    "known_brands": ["google","naver","kakao","kakaobank","toss","kbstar","shinhan","woori","nonghyup","coupang","apple","paypal","amazon","facebook","instagram","netflix","samsung","hana","ibk","kbank","sc","epost"],
+    "suspicious_tlds": ["zip","mov","top","xyz","click","country","gq","tk","ml","cf","ga","work","rest","fit","loan","men","cyou","sbs","quest"],
+    "confusable_ranges": [["0x0400","0x04FF","Cyrillic"],["0x0370","0x03FF","Greek"]],
+    "phish_keywords": [
+      "secure","login","signin","verify","otp","update","account","confirm",
+      "auth","support","alert","unlock","webmail","customer","password","wallet",
+      "delivery","track","parcel","post","cj","logistics","shipment",
+      "pay","refund","card","bank","safe","transfer","won","settlement",
+      "gov","police","court","prosecutor","customs","tax","notice","fine",
+      "benefit","subsidy","relief","support-fund","reward","prize","event",
+      "gift","coupon","lotto","invest","coin",
+      "urgent","check","cancel","block","warning","expired"
+    ],
+    "phishing_keyword_scoring": { "base": 16, "step": 8, "cap": 30 },
+    "allowlist": [
+      "naver.com","naver.me","navercorp.com","kakao.com","kakaocorp.com",
+      "daum.net","google.com","youtube.com","gmail.com","apple.com",
+      "microsoft.com","samsung.com","coupang.com","toss.im","tossbank.com",
+      "kbstar.com","kbfg.com","shinhan.com","shinhancard.com","wooribank.com",
+      "nonghyup.com","nhbank.com","ibk.co.kr","hanabank.com","kebhana.com",
+      "kakaobank.com","gov.kr","korea.kr","go.kr","police.go.kr","fss.or.kr",
+      "kisa.or.kr","11st.co.kr","gmarket.co.kr","baemin.com"
+    ]
+  }
+}

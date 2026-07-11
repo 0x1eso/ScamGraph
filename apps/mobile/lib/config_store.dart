@@ -59,6 +59,28 @@ class ConfigStore {
     }
   }
 
+  /// 임의 키의 문자열 설정을 네이티브 SharedPreferences 에서 읽는다.
+  ///
+  /// 네이티브(SmsReceiver / CallScreeningService)와 공유해야 하는 값
+  /// (예: 캐시된 blocklist)을 같은 저장소에서 읽기 위한 범용 접근자.
+  Future<String?> getPref(String key) async {
+    try {
+      return await _channel.invokeMethod<String>('getPref', {'key': key});
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// 임의 키의 문자열 설정을 네이티브 SharedPreferences 에 저장한다.
+  Future<void> setPref(String key, String value) async {
+    try {
+      await _channel
+          .invokeMethod<void>('setPref', {'key': key, 'value': value});
+    } on PlatformException {
+      // 저장 실패는 치명적이지 않다.
+    }
+  }
+
   /// SMS·전화·알림 런타임 권한을 요청한다 (네이티브 다이얼로그).
   Future<void> requestPermissions() async {
     try {

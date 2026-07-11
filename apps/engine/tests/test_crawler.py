@@ -8,13 +8,19 @@ import pytest
 
 from app.crawler import (
     _grade,
+    _has_confusable,
     _host_of,
     _is_allowlisted,
     _levenshtein,
+    _registrable,
     classify_target,
     quick_assess,
     score_enrichment,
 )
+
+
+def _rules(target: str) -> set[str]:
+    return {r["rule"] for r in quick_assess(target)["reasons"]}
 
 VALID_GRADES = {"safe", "caution", "warning", "danger"}
 
@@ -208,3 +214,132 @@ def test_score_enrichment_is_capped_at_100():
     scored = score_enrichment(result)
     assert scored["risk_score"] <= 100
     assert scored["grade"] == "danger"
+
+
+# ---------------------------------------------------------------------------
+# _registrable — tldextract 기반 정확한 eTLD+1 (멀티파트 TLD)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "host,expected_domain,expected_suffix",
+    [
+        ("naver.com", "naver", "com"),
+        ("ibk.co.kr", "ibk", "co.kr"),
+        ("police.go.kr", "police", "go.kr"),
+        ("shinhan.com.au", "shinhan", "com.au"),
+        ("a.b.example.co.kr", "example", "co.kr"),
+        ("account-verify.top", "account-verify", "top"),
+    ],
+)
+def test_registrable_handles_multipart_tld(host, expected_domain, expected_suffix):
+    sub, domain, suffix, registered = _registrable(host)
+    assert domain == expected_domain
+    assert suffix == expected_suffix
+    assert registered == f"{expected_domain}.{expected_suffix}"
+
+
+def test_registrable_subdomain_is_separated():
+    sub, domain, suffix, registered = _registrable("a.b.example.co.kr")
+    assert sub == "a.b"
+    assert registered == "example.co.kr"
+
+
+# ---------------------------------------------------------------------------
+# 혼동문자(homoglyph) 확장 — 키릴/그리스/전각/퓨니코드 + 혼합 스크립트
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "nаver.com",          # 키릴 а
+        "gοοgle-verify.com",   # 그리스 ο (혼합 스크립트)
+        "ｎaver-login.com",    # 전각 ｎ
+        "xn--pple-43d.com",        # 퓨니코드 → аpple
+    ],
+)
+def test_confusable_variants_detected_as_homoglyph(domain):
+    assert _has_confusable(domain)
+    res = quick_assess(domain)
+    assert "homoglyph" in {r["rule"] for r in res["reasons"]}
+    assert res["grade"] in {"caution", "warning", "danger"}
+
+
+def test_homoglyph_of_allowlisted_is_not_safe():
+    # 혼동문자로 위장한 정상 도메인은 원본 호스트로 검사하므로 화이트리스트를 통과 못한다.
+    res = quick_assess("nаver.com")  # 키릴 а
+    assert res["grade"] != "safe"
+    assert not any(r["rule"] == "verified_domain" for r in res["reasons"])
+
+
+def test_ascii_domain_has_no_confusable():
+    assert not _has_confusable("naver-secure-login.top")
+
+
+# ---------------------------------------------------------------------------
+# 신규 URL 신호
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "target,rule",
+    [
+        ("bit.ly/3xR2p", "url_shortener"),
+        ("han.gl/aB3xk", "url_shortener"),
+        ("buly.kr/xY12z", "url_shortener"),
+        ("http://3626568449/login", "obfuscated_ip"),        # decimal IP
+        ("http://0x8b.0xdc.0x65.0x2c/x", "obfuscated_ip"),   # hex IP
+        ("http://example.com:8081/login", "nonstandard_port"),
+        ("http://a.example.com/%252e%252e/x", "double_encoding"),
+        ("naver.com.account-verify.top", "brand_subdomain"),
+    ],
+)
+def test_new_url_signals_emit_rule(target, rule):
+    assert rule in _rules(target)
+
+
+def test_brand_subdomain_not_double_counted_with_impersonation():
+    # 브랜드가 등록 도메인에 있으면 impersonation, 서브도메인에만 있으면 brand_subdomain —
+    # 둘이 동시에 나오지 않는다.
+    rules = _rules("naver.com.account-verify.top")
+    assert "brand_subdomain" in rules
+    assert "brand_impersonation" not in rules
+
+
+def test_dotted_ip_still_uses_ip_host_rule():
+    assert "ip_host" in _rules("http://185.220.101.44/login")
+
+
+# ---------------------------------------------------------------------------
+# 타이포스쿼팅 정밀도 — 짧은 토큰/무관 단어 오탐 방지
+# ---------------------------------------------------------------------------
+def test_short_token_not_typosquatted():
+    # 'han'(3자)은 'hana'(4자)의 타이포로 오탐되면 안 된다(단축 도메인 han.gl).
+    assert "typosquatting" not in _rules("han.gl/abc")
+
+
+def test_unrelated_word_not_typosquatted():
+    # 'canva'는 어떤 브랜드의 타이포도 아니다(거리 2 짧은 브랜드 오탐 방지).
+    res = quick_assess("canva.com")
+    assert res["grade"] == "safe"
+
+
+# ---------------------------------------------------------------------------
+# 국제전화 — 선행 '+' 도 국제 발신으로 잡는다
+# ---------------------------------------------------------------------------
+def test_intl_phone_plus_prefix_flagged():
+    res = quick_assess("+63-2-8888-1234")
+    assert "intl_prefix" in {r["rule"] for r in res["reasons"]}
+    assert res["grade"] in {"caution", "warning", "danger"}
+
+
+# ---------------------------------------------------------------------------
+# demo-safe: quick_assess 는 네트워크를 절대 호출하지 않는다
+# ---------------------------------------------------------------------------
+def test_quick_assess_is_network_free(monkeypatch):
+    import socket
+
+    def _boom(*args, **kwargs):
+        raise AssertionError("quick_assess must not touch the network")
+
+    monkeypatch.setattr(socket, "getaddrinfo", _boom)
+    monkeypatch.setattr(socket, "create_connection", _boom)
+    for target in ["naver.com", "shinhan-otp.xyz", "nаver.com",
+                   "xn--pple-43d.com", "bit.ly/x", "ibk.co.kr"]:
+        res = quick_assess(target)
+        assert res["grade"] in VALID_GRADES

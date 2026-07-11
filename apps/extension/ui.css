@@ -1,0 +1,78 @@
+/* ScamGraph extension — shared design tokens + primitives.
+   Mirrors apps/web/app/globals.css so every surface reads as one system. */
+:root {
+  --bg: #06080d;
+  --bg-elev: #0c1018;
+  --bg-card: #10151f;
+  --line: #1b2231;
+  --text: #e7ecf4;
+  --text-dim: #8a97ad;
+  --text-mute: #78849a;
+  --accent: #00e5c0;
+  --accent-2: #7cf03d;
+  --danger: #ff4d6d;
+  --warn: #ffb020;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+
+/* Buttons -------------------------------------------------------------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease), transform 0.1s;
+}
+.btn:hover { border-color: #2a3346; background: #131a26; }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.55; cursor: default; }
+
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #052b26; }
+.btn.primary:hover { background: #1ff0cf; border-color: #1ff0cf; }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); border-color: rgba(255, 77, 109, 0.4); }
+.btn.danger:hover { background: rgba(255, 77, 109, 0.1); border-color: var(--danger); }
+
+/* Grade / level pills --------------------------------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+.pill.danger { color: var(--danger); border-color: rgba(255, 77, 109, 0.4); background: rgba(255, 77, 109, 0.08); }
+.pill.danger .dot { background: var(--danger); }
+.pill.warning { color: var(--warn); border-color: rgba(255, 176, 32, 0.4); background: rgba(255, 176, 32, 0.08); }
+.pill.warning .dot { background: var(--warn); }
+.pill.caution { color: var(--accent-2); border-color: rgba(124, 240, 61, 0.35); background: rgba(124, 240, 61, 0.07); }
+.pill.caution .dot { background: var(--accent-2); }
+.pill.safe { color: var(--accent); border-color: rgba(0, 229, 192, 0.35); background: rgba(0, 229, 192, 0.07); }
+.pill.safe .dot { background: var(--accent); }
+.pill.unknown { color: var(--text-mute); border-color: var(--line); background: var(--bg-elev); }
+.pill.unknown .dot { background: var(--text-mute); }

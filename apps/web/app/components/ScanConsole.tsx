@@ -6,6 +6,8 @@
 
 import { useState } from "react";
 import { scan, type ScanReason, type ScanResult } from "@/lib/api";
+import ScanExamples from "./ScanExamples";
+import EvidenceFlow from "./EvidenceFlow";
 
 interface ScanConsoleProps {
   // 스캔 성공 시 상위(page)가 관계망을 확장하도록 결과를 넘겨준다.
@@ -26,6 +28,17 @@ const KIND_LABEL: Record<ScanResult["kind"], string> = {
   account: "계좌",
 };
 
+// 간편 모드의 등급별 한 줄 행동 지침. 비전문가가 "지금 뭘 하면 되나"를 즉시 알도록.
+const GRADE_ACTION: Record<ScanResult["grade"], string> = {
+  danger: "🚨 열지 마세요 · 송금하지 마세요",
+  warning: "⚠️ 확인 전에는 응하지 마세요",
+  caution: "🔎 출처를 다시 확인하세요",
+  safe: "✅ 특이 위험 신호가 없습니다",
+};
+
+// 결과 상세 수준. 간편(요약) ↔ 분석(전체 근거). 기본은 분석.
+type ResultMode = "simple" | "analysis";
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -39,10 +52,10 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const target = input.trim();
-    if (!target || loading) {
+  // 폼 제출·예시 칩이 공유하는 단일 스캔 경로. 대상만 넘기면 게이트웨이를 호출한다.
+  async function runScan(target: string) {
+    const trimmed = target.trim();
+    if (!trimmed || loading) {
       return;
     }
 
@@ -50,7 +63,7 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
     setError(null);
 
     try {
-      const scanResult = await scan(target);
+      const scanResult = await scan(trimmed);
       setResult(scanResult);
       onResult?.(scanResult);
     } catch (err: unknown) {
@@ -60,6 +73,17 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void runScan(input);
+  }
+
+  // 예시 칩 선택 → 입력을 채우고(시각 피드백) 즉시 스캔(킬샷 원클릭 재현).
+  function handlePickExample(value: string) {
+    setInput(value);
+    void runScan(value);
   }
 
   return (
@@ -83,6 +107,8 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
           {loading ? "SCANNING…" : "SCAN"}
         </button>
       </form>
+
+      <ScanExamples onPick={handlePickExample} disabled={loading} />
 
       {loading && (
         <div className="sc-scanning" role="status" aria-live="polite">
@@ -147,15 +173,48 @@ function ReasonItem({ reason }: { reason: ScanReason }) {
   );
 }
 
+// ── 간편/분석 모드 토글 ──────────────────────────────────────
+function ModeToggle({ mode, onChange }: { mode: ResultMode; onChange: (m: ResultMode) => void }) {
+  return (
+    <div className="sc-mode" role="tablist" aria-label="결과 표시 모드">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "simple"}
+        className={`sc-mode-btn${mode === "simple" ? " on" : ""}`}
+        onClick={() => onChange("simple")}
+      >
+        간편
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "analysis"}
+        className={`sc-mode-btn${mode === "analysis" ? " on" : ""}`}
+        onClick={() => onChange("analysis")}
+      >
+        분석
+      </button>
+    </div>
+  );
+}
+
 // ── 결과 패널 ────────────────────────────────────────────────
 function ResultPanel({ result }: { result: ScanResult }) {
+  // 상세 수준(간편/분석). 기본은 분석 — 근거 전체가 세일즈 포인트.
+  const [mode, setMode] = useState<ResultMode>("analysis");
   const meta = GRADE_META[result.grade];
   // 원본 불변: 복사본을 정렬해 출처·피드 근거를 상단에 배치한다.
   const orderedReasons = [...result.reasons].sort((a, b) => reasonRank(a) - reasonRank(b));
+  const isAnalysis = mode === "analysis";
 
   return (
     // key로 대상이 바뀔 때마다 진입 애니메이션을 재생한다.
     <div className="sc-result" key={result.target}>
+      <div className="sc-mode-row">
+        <ModeToggle mode={mode} onChange={setMode} />
+      </div>
+
       <div className="sc-result-top">
         <RiskGauge score={result.risk_score} color={meta.color} />
 
@@ -176,31 +235,44 @@ function ResultPanel({ result }: { result: ScanResult }) {
         </div>
       </div>
 
-      {result.feed_sources && result.feed_sources.length > 0 && (
-        <div className="sc-feeds" role="note">
-          <span className="sc-feeds-label">📡 위협 피드 대조</span>
-          <span className="sc-feeds-chips">
-            {result.feed_sources.map((source) => (
-              <span className="sc-feeds-chip" key={source}>
-                ◆ {source}
-              </span>
-            ))}
-          </span>
-          <span className="sc-feeds-note">실제 외부 위협 피드에 등재된 지표</span>
-        </div>
-      )}
+      {/* 한 줄 행동 지침 — 두 모드 모두 노출. 간편 모드의 핵심 메시지. */}
+      <div className="sc-action" style={{ borderColor: meta.color }}>
+        <span className="sc-action-bar" style={{ background: meta.color }} aria-hidden="true" />
+        <span className="sc-action-text">{GRADE_ACTION[result.grade]}</span>
+      </div>
 
-      <div className="sc-reasons-label">// 판단 근거 {orderedReasons.length}건</div>
-      <ul className="sc-reasons">
-        {orderedReasons.map((reason, i) => (
-          <ReasonItem reason={reason} key={`${reason.rule}-${i}`} />
-        ))}
-        {orderedReasons.length === 0 && (
-          <li className="sc-reason sc-reason-empty">
-            <span className="sc-detail">특이 위험 신호가 감지되지 않았습니다.</span>
-          </li>
-        )}
-      </ul>
+      {/* 분석 모드에서만 피드 대조 · 증거 흐름 · 판단 근거 전체를 펼친다. */}
+      {isAnalysis && (
+        <>
+          {result.feed_sources && result.feed_sources.length > 0 && (
+            <div className="sc-feeds" role="note">
+              <span className="sc-feeds-label">📡 위협 피드 대조</span>
+              <span className="sc-feeds-chips">
+                {result.feed_sources.map((source) => (
+                  <span className="sc-feeds-chip" key={source}>
+                    ◆ {source}
+                  </span>
+                ))}
+              </span>
+              <span className="sc-feeds-note">실제 외부 위협 피드에 등재된 지표</span>
+            </div>
+          )}
+
+          <EvidenceFlow result={result} />
+
+          <div className="sc-reasons-label">// 판단 근거 {orderedReasons.length}건</div>
+          <ul className="sc-reasons">
+            {orderedReasons.map((reason, i) => (
+              <ReasonItem reason={reason} key={`${reason.rule}-${i}`} />
+            ))}
+            {orderedReasons.length === 0 && (
+              <li className="sc-reason sc-reason-empty">
+                <span className="sc-detail">특이 위험 신호가 감지되지 않았습니다.</span>
+              </li>
+            )}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
@@ -271,7 +343,51 @@ const SCAN_CONSOLE_CSS = `
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── 간편/분석 모드 토글 (결과 우상단 세그먼트 컨트롤) ── */
+.sc-mode-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.sc-mode {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-elev);
+}
+.sc-mode-btn {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 6px 16px;
+  border: none; border-radius: 999px;
+  background: transparent; color: var(--text-mute);
+  cursor: pointer;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.sc-mode-btn:hover { color: var(--text-dim); }
+.sc-mode-btn.on {
+  color: #04120f;
+  background: var(--accent);
+}
+
 .sc-result-top { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+
+/* ── 한 줄 행동 지침 배너 — 등급색 좌측 강조선. 간편 모드의 주역. ── */
+.sc-action {
+  position: relative;
+  display: flex; align-items: center;
+  margin-top: 18px;
+  padding: 14px 16px 14px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.sc-action-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+.sc-action-text {
+  font-size: clamp(0.98rem, 0.92rem + 0.4vw, 1.18rem);
+  font-weight: 800; letter-spacing: -0.01em;
+  color: var(--text);
+}
 
 .sc-gauge { flex: 0 0 auto; }
 .sc-gauge-arc { transition: stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1); }

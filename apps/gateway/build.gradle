@@ -18,6 +18,11 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // 관측성(Observability) — Actuator + Micrometer Prometheus 레지스트리
+    // /actuator/prometheus, /actuator/health 노출. 프로메테우스가 스크레이프.
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
     // 공개 API 문서(Swagger UI) — /docs
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
     // RestClient 요청 바디 전송용 견고한 HTTP 클라이언트 (JDK 기본 팩토리의 POST 바디 누락 회피)
@@ -27,6 +32,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly 'org.postgresql:postgresql'
     implementation 'org.neo4j.driver:neo4j-java-driver:5.27.0'
+
+    // 사건 파일(Case File) PDF 증거 도시에 생성 — 경찰 핸드오프용 (OpenPDF: iText 2.x 계열 LGPL/MPL)
+    implementation 'com.github.librepdf:openpdf:1.3.35'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -34,3 +34,21 @@ springdoc:
     path: /docs        # 공개 API 문서
   api-docs:
     path: /v3/api-docs
+
+# 관측성 — Actuator + Prometheus 스크레이프 엔드포인트(/actuator/prometheus, /actuator/health)
+# RateLimitFilter 는 /api/** 에만 적용되므로 /actuator/** 는 레이트 리밋 대상이 아니다(스크레이프 안전).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true

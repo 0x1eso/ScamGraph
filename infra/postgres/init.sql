@@ -51,6 +51,51 @@ INSERT INTO blocklist (value, kind, source, source_kind, detail) VALUES
     ('070-8890-1234',            'phone',  'police_kr', 'gov',    '경찰청 보이스피싱 주의 번호')
 ON CONFLICT DO NOTHING;
 
+-- 알림 구독(watchlist) — 관심 도메인/번호/계좌/브랜드 감시
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id           BIGSERIAL PRIMARY KEY,
+    subscriber   TEXT        NOT NULL,            -- 이메일/식별자
+    target       TEXT        NOT NULL,            -- 감시 대상(값 또는 브랜드)
+    kind         TEXT        NOT NULL,            -- url | phone | account | brand
+    channel      TEXT        NOT NULL DEFAULT 'web',  -- web | email | webhook
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (subscriber, target)
+);
+CREATE INDEX IF NOT EXISTS idx_sub_target ON subscriptions (target);
+
+-- 알림 발생 로그
+CREATE TABLE IF NOT EXISTS alerts (
+    id           BIGSERIAL PRIMARY KEY,
+    target       TEXT        NOT NULL,
+    kind         TEXT        NOT NULL,
+    headline     TEXT        NOT NULL,
+    detail       TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts (created_at DESC);
+
+-- 이의제기(정정) 접수 — 오탐/명예훼손 대응
+CREATE TABLE IF NOT EXISTS appeals (
+    id           BIGSERIAL PRIMARY KEY,
+    target       TEXT        NOT NULL,
+    kind         TEXT        NOT NULL,
+    claim        TEXT        NOT NULL,            -- 이의 사유
+    contact      TEXT,
+    status       TEXT        NOT NULL DEFAULT 'received',  -- received | reviewing | upheld | rejected
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_appeals_status ON appeals (status);
+
+-- 신고 이벤트 — poisoning 방어(신고자 익명해시·시간 기반 레이트/dedup)
+CREATE TABLE IF NOT EXISTS report_events (
+    id            BIGSERIAL PRIMARY KEY,
+    target        TEXT        NOT NULL,
+    reporter_hash TEXT,                           -- 신고자 익명 해시(IP/기기)
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_report_events_target ON report_events (target);
+CREATE INDEX IF NOT EXISTS idx_report_events_reporter ON report_events (reporter_hash, created_at DESC);
+
 -- 공개 API 키
 CREATE TABLE IF NOT EXISTS api_keys (
     id           BIGSERIAL PRIMARY KEY,

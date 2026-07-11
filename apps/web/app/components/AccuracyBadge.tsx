@@ -20,12 +20,12 @@ interface Accuracy {
 
 // 엔진 실측 스냅샷(데모 세이프 폴백).
 const SEED: Accuracy = {
-  accuracy: 0.956,
+  accuracy: 0.964,
   precision: 1.0,
-  recall: 0.918,
-  f1: 0.957,
-  samples: 91,
-  confusion: { tp: 45, fp: 0, tn: 42, fn: 4 },
+  recall: 0.929,
+  f1: 0.9634,
+  samples: 165,
+  confusion: { tp: 79, fp: 0, tn: 80, fn: 6 },
 };
 
 function isAccuracy(d: unknown): d is Accuracy {

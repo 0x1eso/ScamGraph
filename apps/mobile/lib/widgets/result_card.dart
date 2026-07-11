@@ -29,14 +29,22 @@ class ResultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      result.kindKorean,
-                      style: const TextStyle(
-                        color: ScamColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.4,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          result.kindKorean,
+                          style: const TextStyle(
+                            color: ScamColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                        if (result.offline) ...[
+                          const SizedBox(width: 8),
+                          const _OfflineTag(),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -75,6 +83,29 @@ class ResultCard extends StatelessWidget {
             ...result.reasons.map((r) => _ReasonRow(reason: r)),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _OfflineTag extends StatelessWidget {
+  const _OfflineTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: ScamColors.accent.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '오프라인',
+        style: TextStyle(
+          color: ScamColors.accent,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

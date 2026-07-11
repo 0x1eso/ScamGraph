@@ -2,6 +2,7 @@ package io.scamgraph.gateway;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.neo4j.driver.Driver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -28,12 +29,14 @@ public class ReportController {
     private final RestClient engine;
     private final JdbcTemplate jdbc;
     private final Driver neo4j;
+    private final ReportDefense defense;
 
     public ReportController(RestClient.Builder builder, JdbcTemplate jdbc, Driver neo4j,
-                            @Value("${engine.url}") String engineUrl) {
+                            ReportDefense defense, @Value("${engine.url}") String engineUrl) {
         this.engine = builder.baseUrl(engineUrl).build();
         this.jdbc = jdbc;
         this.neo4j = neo4j;
+        this.defense = defense;
     }
 
     @GetMapping("/reports")
@@ -67,51 +70,62 @@ public class ReportController {
     }
 
     @PostMapping("/report")
-    @Operation(summary = "사기 신고 접수 (플라이휠)",
-            description = "신고를 Postgres에 저장하고 Neo4j 그래프에 커뮤니티 위협으로 즉시 반영합니다 — "
-                    + "신고 즉시 /api/check·귀속을 통해 모두가 보호받습니다.")
-    public Object report(@RequestBody ReportRequest req) {
-        String target = req.target() == null ? "" : req.target();
+    @Operation(summary = "사기 신고 접수 (플라이휠 · poisoning 방어)",
+            description = "신고자 익명 해시·dedup·burst·독립성·allowlist 방어를 거친 뒤, 새 독립 신고만 "
+                    + "Postgres/Neo4j 그래프에 반영합니다. 한 행위자가 반복해도 대상을 부풀릴 수 없습니다. "
+                    + "정상 도메인 신고는 status='review' 로 접수만 되고 자동 승격되지 않습니다.")
+    public Object report(@RequestBody ReportRequest req, HttpServletRequest http) {
+        String target = req.target() == null ? "" : req.target().trim();
         String kind = (req.kind() == null || req.kind().isBlank()) ? "url" : req.kind();
         String note = req.note() == null ? "" : req.note();
 
-        // 1) Postgres 저장
-        try {
-            jdbc.update(
-                    "INSERT INTO reports (target, kind, note, status, votes) VALUES (?, ?, ?, 'pending', 1)",
-                    target, kind, note);
-        } catch (Exception ignored) {
-        }
+        // 0) poisoning 방어 — 신고자 익명 해시 + dedup/rate-limit/독립성/allowlist 평가.
+        //    승격 정책(docs/abuse-defense.md §3): 신고 1건=저장만 / 독립 다수="다수 신고" 신호 /
+        //    blocklist 승격=강한 기술신호 + 운영자 dual-approval(신고 접수 경로에서 자동 승격 없음).
+        String reporterHash = defense.reporterHash(http);
+        ReportDefense.Verdict verdict = defense.evaluate(target, reporterHash);
 
-        // 2) Neo4j 그래프에 커뮤니티 위협으로 반영 (신고 즉시 모두가 보호)
-        try {
-            String cypher = switch (kind) {
-                case "phone" -> "MERGE (n:Phone {number:$t}) "
-                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
-                case "account" -> "MERGE (n:Account {number:$t}) "
-                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
-                default -> "MERGE (n:Target {value:$t}) "
-                        + "SET n.community_reports = coalesce(n.community_reports,0)+1, "
-                        + "n.source='community', n.grade = coalesce(n.grade,'warning')";
-            };
-            try (var session = neo4j.session()) {
-                session.run(cypher, Map.of("t", target));
+        // 1) 판정에 영향을 주는 반영(reports 테이블 + Neo4j)은 '새 독립 신고자 & 비-allowlist' 일 때만.
+        //    CheckController 의 커뮤니티 카운트가 reports 를 읽으므로, dedup 을 통과한 독립 신고만
+        //    여기 쌓인다 → 원시 행수 = 독립 신고자 수 → 한 명이 반복해도 대상을 부풀릴 수 없다.
+        if (verdict.escalateToGraph()) {
+            // 1a) Postgres 저장 (커뮤니티 신고)
+            try {
+                jdbc.update(
+                        "INSERT INTO reports (target, kind, note, status, votes) VALUES (?, ?, ?, 'pending', 1)",
+                        target, kind, note);
+            } catch (Exception ignored) {
             }
-        } catch (Exception ignored) {
-        }
 
-        // 3) 누적 커뮤니티 신고 수
-        long reports = 1;
-        try {
-            Long c = jdbc.queryForObject("SELECT COUNT(*) FROM reports WHERE target = ?", Long.class, target);
-            reports = c != null ? c : 1;
-        } catch (Exception ignored) {
+            // 1b) Neo4j 그래프에 커뮤니티 위협으로 반영 (킬샷 데모의 관계망 확산)
+            try {
+                String cypher = switch (kind) {
+                    case "phone" -> "MERGE (n:Phone {number:$t}) "
+                            + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
+                    case "account" -> "MERGE (n:Account {number:$t}) "
+                            + "SET n.community_reports = coalesce(n.community_reports,0)+1, n.source='community'";
+                    default -> "MERGE (n:Target {value:$t}) "
+                            + "SET n.community_reports = coalesce(n.community_reports,0)+1, "
+                            + "n.source='community', n.grade = coalesce(n.grade,'warning')";
+                };
+                try (var session = neo4j.session()) {
+                    session.run(cypher, Map.of("t", target));
+                }
+            } catch (Exception ignored) {
+            }
         }
+        // allowlist 대상(정상 사업자) 및 dedup/throttle 된 신고는 reports/Neo4j 에 반영되지 않는다.
 
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("status", "reported");
+        out.put("status", verdict.status());              // reported | review | duplicate | throttled
         out.put("target", target);
-        out.put("reports", reports);
+        out.put("reports", verdict.independentCount());    // 프론트 호환: 독립 신고자 수(원시 행수 아님)
+        out.put("independent_reports", verdict.independentCount());
+        out.put("escalation", verdict.escalation());       // stored | multi_report | review_queue
+        out.put("flagged_for_review", verdict.allowlisted());
+        if (verdict.signal() != null) {
+            out.put("signal", verdict.signal());           // "다수 신고"
+        }
         return out;
     }
 

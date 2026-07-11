@@ -106,7 +106,41 @@ services:
     depends_on:
       gateway: { condition: service_started }
 
+  # ── 관측성(Observability) 스택 — 부가 서비스(기존 8개 서비스 동작에 영향 없음) ──
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=6h
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports: ["9090:9090"]
+    depends_on:
+      gateway: { condition: service_started }
+      engine: { condition: service_started }
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      # 데모 세이프: 익명 접속 허용(로그인 벽 없이 대시보드 즉시 열람). admin 계정도 유지.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: scamgraph
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_USERS_DEFAULT_THEME: dark
+      GF_LOG_LEVEL: warn
+    ports: ["3003:3000"]   # 호스트 3000 이 점유된 환경 대비 3003 로 매핑(web=3001)
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      prometheus: { condition: service_started }
+
 volumes:
   pgdata:
   neo4jdata:
   meilidata:
+  promdata:
+  grafanadata:
