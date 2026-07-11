@@ -59,12 +59,24 @@ public class AdminController {
             confirmed = 187;
         }
 
-        // 등급 분포 — 신고 테이블엔 grade 가 없어 baseline 사용
+        // 등급 분포 — baseline + 엔진이 적재한 실 스캔 등급(scans 테이블)
+        Map<String, Integer> gradeReal = new HashMap<>();
+        long realScans = 0;
+        try {
+            jdbc.query("SELECT grade, COUNT(*) AS c FROM scans GROUP BY grade",
+                    rs -> {
+                        gradeReal.put(rs.getString("grade"), rs.getInt("c"));
+                    });
+            Long sc = jdbc.queryForObject("SELECT COUNT(*) FROM scans", Long.class);
+            realScans = sc != null ? sc : 0;
+        } catch (Exception ignored) {
+            // scans 미가동 → baseline 만
+        }
         Map<String, Object> byGrade = new LinkedHashMap<>();
-        byGrade.put("danger", 342);
-        byGrade.put("warning", 210);
-        byGrade.put("caution", 95);
-        byGrade.put("safe", 620);
+        byGrade.put("danger", 342 + gradeReal.getOrDefault("danger", 0));
+        byGrade.put("warning", 210 + gradeReal.getOrDefault("warning", 0));
+        byGrade.put("caution", 95 + gradeReal.getOrDefault("caution", 0));
+        byGrade.put("safe", 620 + gradeReal.getOrDefault("safe", 0));
 
         // 최근 14일 위협 추이 — 상승 추세 (결정적)
         List<Map<String, Object>> timeline = new ArrayList<>();
@@ -77,11 +89,10 @@ public class AdminController {
             timeline.add(point);
         }
 
-        long uptime = (System.currentTimeMillis() - startedAt) / 1000;
         Map<String, Object> totals = new LinkedHashMap<>();
         totals.put("reports", reportTotal);
         totals.put("confirmed", confirmed);
-        totals.put("scans", 1247 + uptime);
+        totals.put("scans", 1247 + realScans);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("by_grade", byGrade);

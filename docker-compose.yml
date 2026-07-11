@@ -54,6 +54,7 @@ services:
       NEO4J_PASSWORD: scamgraph123
       MEILI_URL: http://meilisearch:7700
       MEILI_KEY: scamgraph_dev_key
+      DATABASE_URL: postgresql://scamgraph:scamgraph@postgres:5432/scamgraph
     ports: ["8000:8000"]
     volumes:
       - ./apps/engine:/app
@@ -72,6 +73,7 @@ services:
       NEO4J_PASSWORD: scamgraph123
       MEILI_URL: http://meilisearch:7700
       MEILI_KEY: scamgraph_dev_key
+      DATABASE_URL: postgresql://scamgraph:scamgraph@postgres:5432/scamgraph
     volumes:
       - ./apps/engine:/app
     depends_on:

@@ -45,7 +45,8 @@ const DIM_COLOR = "#20283a";
 
 function colorForNode(node: GraphNode): string {
   if (node.grade) return GRADE_COLORS[node.grade];
-  return TYPE_COLORS[node.type];
+  // Registrant/Cert 등 신규 타입은 회색 폴백
+  return TYPE_COLORS[node.type] ?? "#5a6478";
 }
 
 // 캠페인·공유 IP·타깃을 허브로 크게, 나머지는 작게

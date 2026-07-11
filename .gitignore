@@ -33,8 +33,7 @@ build/
 # Docker volumes (root-level bind mounts only — not app source like apps/web/app/data)
 /data/
 
-# 엔진(Python)은 담당자 코드로 대체 예정 — 로컬 dev/test 코드만 유지, 저장소 제외
-/apps/engine/
+# 엔진(Python) — 이제 저장소에 편입(직접 관리)
 
 CLAUDE.md
 .claude

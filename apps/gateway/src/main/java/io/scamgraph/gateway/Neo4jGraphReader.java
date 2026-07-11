@@ -90,6 +90,8 @@ public class Neo4jGraphReader {
         if (l.contains("IP")) return prop(n, "addr");
         if (l.contains("Phone")) return prop(n, "number");
         if (l.contains("Account")) return prop(n, "number");
+        if (l.contains("Registrant")) return "reg:" + prop(n, "name");
+        if (l.contains("Cert")) return "cert:" + prop(n, "fingerprint");
         if (l.contains("Report")) return "report:" + n.elementId();
         return n.elementId();
     }
@@ -102,6 +104,11 @@ public class Neo4jGraphReader {
         if (l.contains("IP")) return prop(n, "addr");
         if (l.contains("Phone")) return prop(n, "number");
         if (l.contains("Account")) return prop(n, "number");
+        if (l.contains("Registrant")) return prop(n, "name");
+        if (l.contains("Cert")) {
+            String fp = prop(n, "fingerprint");
+            return fp != null ? "cert:" + fp : "cert";
+        }
         if (l.contains("Report")) {
             String note = prop(n, "note");
             return note != null ? note : "신고";
