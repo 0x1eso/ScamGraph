@@ -8,6 +8,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Graph from "graphology";
 import Sigma from "sigma";
+// 노드/간선 렌더링 프로그램을 명시적으로 등록한다. Sigma 의 기본 자동등록에만 기대면
+// dev(HMR/Fast Refresh) 에서 "circle" 프로그램 등록이 유실돼 런타임 에러가 난다.
+// 기본 매핑과 동일하게: node "circle"=NodeCircleProgram, edge "line"=EdgeRectangleProgram(굵기 지원),
+// "arrow"=EdgeArrowProgram — 겉모습은 그대로 유지된다.
+import { NodeCircleProgram, EdgeRectangleProgram, EdgeArrowProgram } from "sigma/rendering";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import { mockGraph, type GraphData, type GraphNode } from "@/app/data/mockGraph";
 
@@ -92,6 +97,13 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
     const container = containerRef.current;
     if (!container) return; // SSR / 언마운트 가드
 
+    // HMR/재실행 안전장치: 이전 렌더러가 남아 있으면 새로 만들기 전에 정리한다.
+    // (Fast Refresh 로 이펙트가 재실행될 때 WebGL 컨텍스트/프로그램 등록이 겹치는 것을 막는다.)
+    if (rendererRef.current) {
+      rendererRef.current.kill();
+      rendererRef.current = null;
+    }
+
     const graph = new Graph();
 
     // 결정적 초기 배치: index 기반 원형 좌표 (Math.random 미사용).
@@ -131,6 +143,11 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
     });
 
     const renderer = new Sigma(graph, container, {
+      // 렌더링 프로그램 명시 등록 — 자동등록 유실로 인한 "suitable program" 에러 방지.
+      defaultNodeType: "circle",
+      nodeProgramClasses: { circle: NodeCircleProgram },
+      defaultEdgeType: "line",
+      edgeProgramClasses: { line: EdgeRectangleProgram, arrow: EdgeArrowProgram },
       renderLabels: true,
       renderEdgeLabels: true,
       labelColor: { color: "#0e1526" },

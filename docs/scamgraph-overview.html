@@ -117,7 +117,7 @@
 <!-- ===================== 2 ===================== -->
 <section class="section">
   <h2><span class="num">02</span>아키텍처</h2>
-  <p>언어·역할이 분리된 <b>폴리글랏 마이크로서비스</b> 모노레포. <code>docker-compose</code> 한 번으로 8개 서비스가 뜬다.</p>
+  <p>언어·역할이 분리된 <b>폴리글랏 마이크로서비스</b> 모노레포. <code>docker-compose</code> 한 번으로 10개 서비스가 뜬다.</p>
 <pre>
    ┌─────────────────────────────────────────────────────────────┐
    │  apps/web  ·  Next.js 15 / React 19          (:3001)          │
@@ -258,7 +258,7 @@
   <h2><span class="num">07</span>디렉터리 구조</h2>
 <pre>
 makertone/
-├── docker-compose.yml         # 8개 서비스
+├── docker-compose.yml         # 10개 서비스
 ├── Makefile                   # make up / seed / down
 ├── README.md · CLAUDE.md
 ├── apps/
@@ -293,7 +293,7 @@ makertone/
 <section class="section">
   <h2><span class="num">08</span>실행 가이드</h2>
 <pre>
-# 전체 스택 (8 서비스)
+# 전체 스택 (10 서비스)
 make up            # = docker compose up --build
 
 # Neo4j 관계망 시드 (그래프 실데이터)

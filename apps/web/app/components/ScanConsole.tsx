@@ -8,6 +8,7 @@ import { useState } from "react";
 import { scan, type ScanReason, type ScanResult } from "@/lib/api";
 import ScanExamples from "./ScanExamples";
 import EvidenceFlow from "./EvidenceFlow";
+import AiSecondOpinion from "./AiSecondOpinion";
 
 interface ScanConsoleProps {
   // 스캔 성공 시 상위(page)가 관계망을 확장하도록 결과를 넘겨준다.
@@ -123,6 +124,9 @@ export default function ScanConsole({ onResult }: ScanConsoleProps) {
       )}
 
       {result && !loading && <ResultPanel result={result} />}
+
+      {/* AI 2차 소견 (참고용) — 규칙 결과와 별개인 부가 패널. 규칙 판정/근거는 위 ResultPanel 이 그대로 담당. */}
+      {result && !loading && <AiSecondOpinion result={result} key={result.target} />}
 
       <style>{SCAN_CONSOLE_CSS}</style>
     </div>

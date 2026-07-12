@@ -114,6 +114,42 @@ function normalize(raw: unknown): Analytics {
   };
 }
 
+// 절단점을 "차단 임팩트" 순으로 정렬한다: betweenness(길목) → degree(허브) 순으로
+// 지표에 잡히는 절단점을 위로 올리고, 어느 지표에도 없는 것은 원본 순서를 보존한다.
+// 실데이터가 배열을 비우거나 누락해도 크래시하지 않도록 방어적으로 처리(항상 배열 취급).
+function rankCutPoints(
+  cuts: Articulation[],
+  betweenness: BetweennessNode[],
+  degree: DegreeNode[],
+): Articulation[] {
+  const safeCuts = Array.isArray(cuts) ? cuts : [];
+  const btwOf = new Map(
+    (Array.isArray(betweenness) ? betweenness : []).map((b) => [b.label, b.betweenness]),
+  );
+  const degOf = new Map(
+    (Array.isArray(degree) ? degree : []).map((d) => [d.label, d.degree]),
+  );
+  return safeCuts
+    .map((cut, index) => ({ cut, index }))
+    .sort((a, b) => {
+      // 1) betweenness 보유 → 값 내림차순 (있는 쪽이 항상 위)
+      const aBtw = btwOf.get(a.cut.label);
+      const bBtw = btwOf.get(b.cut.label);
+      if (aBtw !== undefined && bBtw !== undefined && aBtw !== bBtw) return bBtw - aBtw;
+      if (aBtw !== undefined && bBtw === undefined) return -1;
+      if (aBtw === undefined && bBtw !== undefined) return 1;
+      // 2) degree 보유 → 값 내림차순 (있는 쪽이 항상 위)
+      const aDeg = degOf.get(a.cut.label);
+      const bDeg = degOf.get(b.cut.label);
+      if (aDeg !== undefined && bDeg !== undefined && aDeg !== bDeg) return bDeg - aDeg;
+      if (aDeg !== undefined && bDeg === undefined) return -1;
+      if (aDeg === undefined && bDeg !== undefined) return 1;
+      // 3) 어느 지표에도 없음 → 원본 순서 유지
+      return a.index - b.index;
+    })
+    .map((entry) => entry.cut);
+}
+
 async function fetchAnalytics(signal: AbortSignal): Promise<Analytics> {
   // 실패(비200·네트워크·손상 JSON)면 SEED로 폴백하고, 성공 응답은 정규화한다(데모 세이프).
   const raw = await fetchJson<unknown>("/api/graph/analytics", {
@@ -149,6 +185,13 @@ export default function Observatory() {
   const maxDeg = Math.max(1, ...data.top_degree.map((d) => d.degree));
   const maxBtw = Math.max(0.01, ...data.top_betweenness.map((b) => b.betweenness));
   const cutCount = data.articulation_points.length;
+  // 임팩트 순으로 정렬 후 상위 N개만 카드로 노출(총계는 헤드라인에 그대로 유지).
+  const shownCuts = rankCutPoints(
+    data.articulation_points,
+    data.top_betweenness,
+    data.top_degree,
+  ).slice(0, CUT_DISPLAY_LIMIT);
+  const hiddenCutCount = Math.max(0, cutCount - shownCuts.length);
 
   return (
     <div className="obs" role="region" aria-label="관계망 그래프 조직 단위 분석">
@@ -176,7 +219,7 @@ export default function Observatory() {
           </span>
         </div>
         <ul className="obs-cut-list">
-          {data.articulation_points.map((a, i) => (
+          {shownCuts.map((a, i) => (
             <li className="obs-cut-card" key={`${a.label}-${i}`}>
               <span className="obs-cut-icon" aria-hidden="true">✂</span>
               <span className="obs-cut-label" title={a.label}>{a.label}</span>
@@ -184,6 +227,11 @@ export default function Observatory() {
             </li>
           ))}
         </ul>
+        {hiddenCutCount > 0 && (
+          <p className="obs-cut-note">
+            총 <b>{cutCount}</b>개 중 임팩트 상위 <b>{shownCuts.length}</b>개 표시 · 외 <b>{hiddenCutCount}</b>개
+          </p>
+        )}
       </section>
 
       <div className="obs-cols">

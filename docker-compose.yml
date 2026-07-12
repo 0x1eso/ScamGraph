@@ -91,6 +91,10 @@ services:
     build: ./apps/gateway
     environment:
       ENGINE_URL: http://engine:8000
+      # 선택: AI 2차 소견(참고용, GLM/Zhipu). 미설정이면 빈 값 → 게이트웨이가 호출 없이 available:false 로 안전 스킵.
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      GLM_BASE_URL: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      GLM_MODEL: ${GLM_MODEL:-glm-5.2}
     ports: ["8080:8080"]
     depends_on:
       engine: { condition: service_started }
