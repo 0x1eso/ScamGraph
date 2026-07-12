@@ -18,6 +18,11 @@ venv/
 celerybeat-schedule*
 celerybeat.pid
 
+# 배포 산출물 — 대용량 이미지 번들 · 실제 터널 크리덴셜(예시 파일만 커밋)
+deploy/scamgraph-images.tar*
+deploy/cloudflared/config.yml
+deploy/cloudflared/*.json
+
 # Java / Gradle
 .gradle/
 build/

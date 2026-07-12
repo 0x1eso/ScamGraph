@@ -20,10 +20,19 @@ export type FeedEvent = {
   origin?: "feed" | "scan";
 };
 
-// http(s):// gateway URL을 ws(s):// 피드 엔드포인트로 변환한다.
+// gateway URL을 ws(s):// 피드 엔드포인트로 변환한다.
+// - 절대 http(s):// URL(로컬 개발 기본값 http://localhost:8080) → 그대로 ws(s)로 변환.
+// - 빈 문자열/상대경로(도메인 배포에서 same-origin 프록시) → 현재 페이지 오리진 기준 ws(s).
+//   (WebSocket 생성자는 상대 URL을 허용하지 않으므로 절대 ws(s):// 로 만들어야 한다.)
 function toFeedUrl(gateway: string): string {
-  const wsBase = gateway.replace(/^http/, "ws");
-  return `${wsBase}/ws/feed`;
+  if (/^https?:\/\//i.test(gateway)) {
+    return `${gateway.replace(/^http/i, "ws")}/ws/feed`;
+  }
+  if (typeof window !== "undefined") {
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${proto}://${window.location.host}/ws/feed`;
+  }
+  return "/ws/feed"; // SSR 폴백(subscribeFeed의 window 가드로 실제 도달 안 함).
 }
 
 // 실시간 피드를 구독한다.

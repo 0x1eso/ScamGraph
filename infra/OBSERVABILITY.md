@@ -43,7 +43,7 @@ Prometheus + Grafana 기반 메트릭 스택. **기존 8개 서비스에 영향 
 
 ```bash
 make up
-open http://localhost:3000            # Grafana → ScamGraph 폴더 → 관측성 개요 (익명 즉시 열람)
+open http://localhost:3003            # Grafana → ScamGraph 폴더 → 관측성 개요 (익명 즉시 열람)
 open http://localhost:9090/targets    # Prometheus 스크레이프 타깃 UP 확인
 curl http://localhost:8080/actuator/prometheus | head
 curl http://localhost:8000/metrics | head

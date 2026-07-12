@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ScamGraph — 관람 안내</title>
+<style>
+  :root {
+    --bg: #06080d;
+    --bg2: #0b0f18;
+    --panel: #0e131e;
+    --panel2: #121826;
+    --line: rgba(255, 255, 255, 0.09);
+    --line2: rgba(255, 255, 255, 0.16);
+    --accent: #00e5c0;
+    --accent2: #7cf03d;
+    --danger: #ff4d6d;
+    --warn: #ffb020;
+    --text: #eaf0f7;
+    --muted: #93a1b6;
+    --dim: #5f6d82;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @page { size: A4; margin: 0; }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 80% at 82% -6%, rgba(0, 229, 192, 0.11), transparent 55%),
+      radial-gradient(90% 70% at -8% 108%, rgba(124, 240, 61, 0.07), transparent 55%),
+      linear-gradient(180deg, #070a11, #05070c 60%, #04060a);
+    display: flex;
+    flex-direction: column;
+  }
+  .page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+    background-size: 34px 34px;
+    pointer-events: none;
+  }
+  @media screen {
+    body { background: #02040a; padding: 26px 0; }
+    .page { box-shadow: 0 24px 90px rgba(0, 0, 0, 0.7); margin-bottom: 30px; border-radius: 4px; }
+  }
+  .page > * { position: relative; z-index: 1; }
+
+  /* ---- status strip ---- */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9mm 14mm 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .brandmark { font-size: 13px; letter-spacing: 0.02em; color: var(--text); font-weight: 700; text-transform: none; }
+  .brandmark b { color: var(--accent); }
+  .status-chip { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .dot.lime { background: var(--accent2); box-shadow: 0 0 10px var(--accent2); }
+  .spacer { flex: 1; }
+  .pagemark { color: var(--dim); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+  .pad { padding: 0 14mm; }
+
+  /* ============ PAGE 1 — HOOK ============ */
+  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 14mm; }
+  .hero h1 {
+    font-size: 74px;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    margin: 20px 0 22px;
+  }
+  .hero h1 .g {
+    background: linear-gradient(96deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .lede { font-size: 20px; color: var(--muted); max-width: 148mm; line-height: 1.55; }
+  .hero .lede b { color: var(--text); font-weight: 700; }
+
+  .badges { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--line2);
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .badge .ic { color: var(--accent2); font-size: 15px; }
+  .badge.hot { border-color: rgba(0, 229, 192, 0.5); background: rgba(0, 229, 192, 0.08); }
+  .badge.hot .ic { color: var(--accent); }
+
+  .hero-net { position: absolute; inset: 0; z-index: 0; opacity: 0.5; }
+
+  .hero-foot {
+    padding: 0 14mm 12mm;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: 12.5px; color: var(--dim); letter-spacing: 0.08em;
+  }
+  .hero-foot .cta { color: var(--accent); }
+
+  /* ============ shared section heads ============ */
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+  .h2 { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; margin-top: 8px; }
+  .h2 .em { color: var(--accent); }
+  .h2 .dg { color: var(--danger); }
+
+  /* ============ PAGE 2 — 왜 + 다른점 ============ */
+  .p-head { padding: 12mm 14mm 4mm; }
+  .why-grid { padding: 4mm 14mm 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .why-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--panel), var(--bg2));
+    padding: 20px 20px 22px;
+  }
+  .why-card .ic { font-size: 26px; }
+  .why-card h3 { font-size: 20px; margin: 12px 0 7px; letter-spacing: -0.01em; }
+  .why-card p { font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+
+  .sdg-row { display: flex; gap: 12px; margin-top: 10px; }
+  .sdg { flex: 1; display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,0.02); }
+  .sdg .num { font-family: var(--mono); font-weight: 800; font-size: 26px; color: var(--accent2); line-height: 1; }
+  .sdg .lbl { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .sdg .lbl b { color: var(--text); display: block; font-size: 14px; }
+
+  .vs-wrap { margin-top: 20px; padding: 0 14mm; }
+  .vs-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; margin-top: 14px; border: 1px solid var(--line2); border-radius: 16px; overflow: hidden; }
+  .vs-col { padding: 22px 22px 24px; }
+  .vs-col.old { background: rgba(255, 77, 109, 0.05); }
+  .vs-col.new { background: rgba(0, 229, 192, 0.06); }
+  .vs-tag { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px; }
+  .vs-col.old .vs-tag { color: var(--danger); }
+  .vs-col.new .vs-tag { color: var(--accent); }
+  .vs-col h4 { font-size: 21px; margin: 12px 0 14px; letter-spacing: -0.01em; }
+  .vs-col ul { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+  .vs-col li { font-size: 14.5px; color: var(--muted); line-height: 1.45; padding-left: 24px; position: relative; }
+  .vs-col.old li::before { content: "✕"; position: absolute; left: 0; color: var(--danger); font-weight: 700; }
+  .vs-col.new li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .vs-col li b { color: var(--text); }
+  .vs-mid { display: flex; align-items: center; justify-content: center; padding: 0 6px; background: var(--bg2); }
+  .vs-mid span { font-family: var(--mono); font-size: 14px; color: var(--dim); font-weight: 700; }
+
+  /* ============ PAGE 3 — 킬샷 ============ */
+  .try-cards { padding: 2mm 14mm 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .try-card { border: 1px solid var(--line2); border-radius: 14px; background: linear-gradient(180deg, var(--panel2), var(--bg2)); padding: 16px 16px 18px; position: relative; overflow: hidden; }
+  .try-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--danger); box-shadow: 0 0 14px var(--danger); }
+  .try-card .val { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--text); word-break: break-all; letter-spacing: -0.01em; }
+  .try-card .val .cyr { color: var(--danger); background: rgba(255, 77, 109, 0.18); border-radius: 3px; padding: 0 2px; text-decoration: underline wavy var(--danger); }
+  .try-card .tag { display: inline-block; margin-top: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--danger); border: 1px solid rgba(255, 77, 109, 0.4); border-radius: 100px; padding: 4px 10px; }
+  .try-card .desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 11px; }
+
+  .flow { padding: 6mm 14mm 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .step { border: 1px solid var(--line); border-radius: 13px; background: var(--panel); padding: 15px 15px 16px; position: relative; }
+  .step .n { font-family: var(--mono); font-weight: 800; font-size: 15px; color: var(--bg); background: linear-gradient(120deg, var(--accent), var(--accent2)); width: 27px; height: 27px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .step h4 { font-size: 15.5px; margin: 12px 0 6px; letter-spacing: -0.01em; }
+  .step p { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .step .arrow { position: absolute; right: -8px; top: 26px; color: var(--dim); font-size: 16px; z-index: 2; }
+  .step:last-child .arrow { display: none; }
+
+  .killshot { margin: 6mm 14mm 0; border: 1px solid var(--line2); border-radius: 16px; background: radial-gradient(90% 120% at 30% 0%, rgba(0, 229, 192, 0.09), transparent 60%), var(--bg2); padding: 14px 18px 6px; flex: 1; display: flex; flex-direction: column; }
+  .killshot .cap { display: flex; align-items: center; justify-content: space-between; }
+  .killshot .cap .t { font-size: 15px; font-weight: 700; }
+  .killshot .cap .t .em { color: var(--accent); }
+  .killshot .cap .badge-live { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--accent2); display: inline-flex; align-items: center; gap: 6px; }
+  .graph-svg { width: 100%; flex: 1; display: block; }
+
+  /* ============ PAGE 4 — 숫자 + 어디서나 + QR ============ */
+  .nums { padding: 2mm 14mm 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .num-card { border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(180deg, var(--panel), var(--bg2)); padding: 20px 18px 18px; }
+  .num-card .big { font-family: var(--mono); font-weight: 800; font-size: 46px; line-height: 1; letter-spacing: -0.03em; background: linear-gradient(100deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .num-card .big.danger { background: none; color: var(--danger); }
+  .num-card .lbl { font-size: 14px; color: var(--text); margin-top: 12px; font-weight: 600; }
+  .num-card .sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  .surfaces { padding: 6mm 14mm 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .surface { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 18px 18px 20px; }
+  .surface .ic { font-size: 30px; }
+  .surface h4 { font-size: 17px; margin: 12px 0 6px; }
+  .surface h4 .em { color: var(--accent); }
+  .surface p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  .qr-wrap { margin: 6mm 14mm 0; }
+  .qr-box {
+    border: 2px dashed rgba(0, 229, 192, 0.5);
+    border-radius: 18px;
+    background: radial-gradient(80% 140% at 85% 20%, rgba(0, 229, 192, 0.1), transparent 60%), var(--bg2);
+    padding: 26px 28px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .qr-slot {
+    width: 118px; height: 118px; flex-shrink: 0;
+    border: 1px solid var(--line2);
+    border-radius: 12px;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 12px),
+      rgba(255, 255, 255, 0.02);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: 0.06em; line-height: 1.5;
+    padding: 8px;
+  }
+  .qr-text .k { font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .qr-text h3 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 8px; }
+  .qr-text p { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 108mm; }
+  .qr-text .url-ph { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 13px; color: var(--dim); border: 1px solid var(--line2); border-radius: 8px; padding: 7px 14px; background: rgba(255,255,255,0.02); }
+
+  .foot {
+    margin-top: auto;
+    padding: 10mm 14mm 12mm;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-top: 1px solid var(--line);
+  }
+  .foot .l .brandmark { font-size: 20px; }
+  .foot .l .sub { font-family: var(--mono); font-size: 11.5px; color: var(--dim); letter-spacing: 0.08em; margin-top: 6px; }
+  .foot .r { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--dim); letter-spacing: 0.06em; line-height: 1.7; }
+  .foot .r b { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 — HOOK ============================ -->
+<section class="page">
+  <div class="statusbar">
+    <span class="brandmark">Scam<b>Graph</b></span>
+    <span class="status-chip"><span class="dot"></span> SYSTEM ONLINE</span>
+    <span class="spacer"></span>
+    <span class="status-chip"><span class="dot lime"></span> LIVE FEED</span>
+    <span class="pagemark">01 / 04</span>
+  </div>
+
+  <!-- 배경 관계망 -->
+  <svg class="hero-net" viewBox="0 0 800 1120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g stroke="rgba(0,229,192,0.28)" stroke-width="1.2" fill="none">
+      <path d="M180 300 L360 420 L560 340 M360 420 L420 640 L640 700 M420 640 L240 780 L180 300 M560 340 L700 520 L640 700 M240 780 L520 900"/>
+    </g>
+    <g fill="rgba(0,229,192,0.9)">
+      <circle cx="180" cy="300" r="5"/><circle cx="360" cy="420" r="7"/><circle cx="560" cy="340" r="5"/>
+      <circle cx="420" cy="640" r="8"/><circle cx="640" cy="700" r="5"/><circle cx="240" cy="780" r="6"/>
+      <circle cx="700" cy="520" r="4"/><circle cx="520" cy="900" r="5"/>
+    </g>
+    <g fill="rgba(124,240,61,0.35)">
+      <circle cx="360" cy="420" r="16"/><circle cx="420" cy="640" r="18"/>
+    </g>
+  </svg>
+
+  <div class="hero">
+    <span class="eyebrow">실시간 사기·피싱 위협 인텔리전스 · SDG 16 · 10</span>
+    <h1>사기의 <span class="g">관계망</span>을<br />실시간으로 추적한다</h1>
+    <p class="lede">
+      의심스러운 <b>URL·전화번호·계좌</b>를 넣으면, 규칙 엔진과 공개 데이터가 위험도를 판정하고
+      흩어진 단서를 <b>하나의 사기 조직</b>으로 이어 그래프로 펼쳐 보여줍니다.
+      블랙박스가 아닌, <b>근거를 설명하는</b> 디지털 시민 방어 플랫폼.
+    </p>
+    <div class="badges">
+      <span class="badge hot"><span class="ic">◆</span> 순수 소프트웨어</span>
+      <span class="badge hot"><span class="ic">◆</span> AI 아님 — 근거를 설명</span>
+      <span class="badge"><span class="ic">✓</span> 모든 판정에 이유가 있다</span>
+    </div>
+  </div>
+
+  <div class="hero-foot">
+    <span>SCAMGRAPH · THREAT INTELLIGENCE PLATFORM</span>
+    <span class="cta">▶ 이 부스에서 직접 검사해 보세요</span>
+  </div>
+</section>
+
+<!-- ==================== PAGE 2 — 왜 / 무엇이 다른가 ==================== -->
+<section class="page">
+  <div class="statusbar">
+    <span class="brandmark">Scam<b>Graph</b></span>
+    <span class="status-chip"><span class="dot"></span> WHY IT MATTERS</span>
+    <span class="spacer"></span>
+    <span class="pagemark">02 / 04</span>
+  </div>
+
+  <div class="p-head">
+    <span class="kicker">// 왜 필요한가</span>
+    <h2 class="h2">링크 한 줄, 전화 한 통에<br /><span class="dg">일상이 무너진다</span></h2>
+  </div>
+
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="ic">🎭</div>
+      <h3>정상과 구분이 안 된다</h3>
+      <p>보이스피싱·스미싱은 은행·택배·경찰을 그대로 흉내 냅니다. 주소창의 <b style="color:var(--text)">한 글자</b>가 바뀌어도 사람 눈으로는 알아채기 어렵습니다.</p>
+    </div>
+    <div class="why-card">
+      <div class="ic">⏱️</div>
+      <h3>차단은 늘 한발 늦다</h3>
+      <p>하나가 막히면 범죄 조직은 곧바로 새 도메인·새 번호로 갈아탑니다. 피해자는 <b style="color:var(--text)">이유도 모른 채</b> 당합니다.</p>
+    </div>
+  </div>
+
+  <div class="pad">
+    <div class="sdg-row">
+      <div class="sdg"><span class="num">16</span><span class="lbl"><b>평화·정의·강력한 제도</b>디지털 범죄로부터 시민 보호</span></div>
+      <div class="sdg"><span class="num">10</span><span class="lbl"><b>불평등 감소</b>고령층·취약계층 디지털 안전망</span></div>
+    </div>
+  </div>
+
+  <div class="vs-wrap">
+    <span class="kicker">// 무엇이 다른가</span>
+    <h2 class="h2" style="font-size:34px;">"차단됨" 통보를 넘어 — <span class="em">조직 전체를 드러낸다</span></h2>
+
+    <div class="vs-grid">
+      <div class="vs-col old">
+        <span class="vs-tag">● 기존 · 정부 · 통신사</span>
+        <h4>결과만 통보하는 블랙박스</h4>
+        <ul>
+          <li><b>"차단되었습니다"</b> 한 줄만 통보</li>
+          <li>왜 위험한지 <b>근거를 알 수 없음</b></li>
+          <li>도메인·전화·계좌를 <b>따로따로</b> 처리</li>
+          <li>새 도메인이 나오면 다시 처음부터</li>
+        </ul>
+      </div>
+      <div class="vs-mid"><span>VS</span></div>
+      <div class="vs-col new">
+        <span class="vs-tag">◆ SCAMGRAPH</span>
+        <h4>연결하고, 근거를 설명한다</h4>
+        <ul>
+          <li>도메인·전화·계좌·IP를 <b>하나의 조직으로 연결</b> (교차 인프라 귀속)</li>
+          <li>판정마다 <b>이유(근거)를 첨부</b> — 재현 가능</li>
+          <li>같은 인증서·IP를 쓰는 <b>다음 도메인까지 추적</b></li>
+          <li>블랙박스 AI 아님 — <b>순수 규칙 엔진</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PAGE 3 — 직접 해보세요 (킬샷) ==================== -->
+<section class="page">
+  <div class="statusbar">
+    <span class="brandmark">Scam<b>Graph</b></span>
+    <span class="status-chip"><span class="dot lime"></span> TRY IT NOW</span>
+    <span class="spacer"></span>
+    <span class="pagemark">03 / 04</span>
+  </div>
+
+  <div class="p-head" style="padding-bottom:2mm;">
+    <span class="kicker">// 직접 해보세요 · 30초 킬샷</span>
+    <h2 class="h2">화면에 이 값을 <span class="em">스캔</span>해 보세요</h2>
+  </div>
+
+  <div class="try-cards">
+    <div class="try-card">
+      <div class="val">secure-tosspay.info</div>
+      <span class="tag">위협 피드 등재</span>
+      <p class="desc">토스를 사칭한 도메인. 전 세계 위협 피드(URLhaus)에 이미 올라와 있습니다.</p>
+    </div>
+    <div class="try-card">
+      <div class="val">n<span class="cyr">а</span>ver.com</div>
+      <span class="tag">혼동 문자 · 키릴 а</span>
+      <p class="desc">'a'가 키릴 문자 'а'입니다. 정상 naver.com과 <b style="color:var(--text)">육안으로 구분 불가!</b></p>
+    </div>
+    <div class="try-card">
+      <div class="val">070-8890-1234</div>
+      <span class="tag">보이스피싱 번호</span>
+      <p class="desc">경찰청 신고 이력이 있는 인터넷전화 번호. 발신 위장에 자주 쓰입니다.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="step"><span class="n">1</span><h4>입력 & 즉시 판정</h4><p>값을 넣으면 규칙 엔진이 100ms 안에 위험도를 계산합니다.</p><span class="arrow">→</span></div>
+    <div class="step"><span class="n">2</span><h4>근거 분해</h4><p>"왜 위험한지" 규칙별 근거가 점수와 함께 펼쳐집니다.</p><span class="arrow">→</span></div>
+    <div class="step"><span class="n">3</span><h4>관계망 확장</h4><p>같은 IP·인증서·번호로 이어진 조직이 그래프로 뻗어 나갑니다.</p><span class="arrow">→</span></div>
+    <div class="step"><span class="n">4</span><h4>사건 파일</h4><p>조직 전체가 한 장의 사건 파일로 정리됩니다.</p></div>
+  </div>
+
+  <div class="killshot">
+    <div class="cap">
+      <div class="t">킬샷 — <span class="em">관계망이 뻗어 나가 사기 조직 전체가 드러난다</span></div>
+      <span class="badge-live"><span class="dot lime"></span> LIVE GRAPH</span>
+    </div>
+    <svg class="graph-svg" viewBox="0 0 760 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#00e5c0" stop-opacity="0.9"/>
+          <stop offset="1" stop-color="#7cf03d" stop-opacity="0.6"/>
+        </linearGradient>
+        <radialGradient id="core" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stop-color="#ff4d6d" stop-opacity="0.9"/>
+          <stop offset="1" stop-color="#ff4d6d" stop-opacity="0.15"/>
+        </radialGradient>
+      </defs>
+      <!-- edges -->
+      <g stroke="url(#edge)" stroke-width="2" fill="none" opacity="0.85">
+        <path d="M380 150 L180 70"/>
+        <path d="M380 150 L165 165"/>
+        <path d="M380 150 L200 250"/>
+        <path d="M380 150 L575 70"/>
+        <path d="M380 150 L600 160"/>
+        <path d="M380 150 L560 255"/>
+        <path d="M575 70 L680 40"/>
+        <path d="M200 250 L120 285"/>
+      </g>
+      <!-- core -->
+      <circle cx="380" cy="150" r="42" fill="url(#core)"/>
+      <circle cx="380" cy="150" r="20" fill="#ff4d6d"/>
+      <text x="380" y="205" text-anchor="middle" fill="#ff8098" font-family="ui-monospace,monospace" font-size="13" font-weight="700">사기 조직</text>
+      <!-- satellite nodes -->
+      <g font-family="ui-monospace,monospace" font-size="11" fill="#cfe">
+        <g><circle cx="180" cy="70" r="9" fill="#00e5c0"/><text x="180" y="52" text-anchor="middle">secure-tosspay.info</text></g>
+        <g><circle cx="165" cy="165" r="8" fill="#7cf03d"/><text x="120" y="150" text-anchor="middle">070-8890-1234</text></g>
+        <g><circle cx="200" cy="250" r="8" fill="#00e5c0"/><text x="200" y="275" text-anchor="middle">계좌 356-****</text></g>
+        <g><circle cx="575" cy="70" r="8" fill="#7cf03d"/><text x="585" y="52" text-anchor="middle">공유 IP 45.13.x.x</text></g>
+        <g><circle cx="600" cy="160" r="8" fill="#00e5c0"/><text x="640" y="163" text-anchor="middle">TLS 인증서</text></g>
+        <g><circle cx="560" cy="255" r="8" fill="#7cf03d"/><text x="565" y="278" text-anchor="middle">tosspay-help.info</text></g>
+        <g opacity="0.7"><circle cx="680" cy="40" r="6" fill="#00e5c0"/><text x="700" y="30" text-anchor="middle">toss-verify.live</text></g>
+        <g opacity="0.7"><circle cx="120" cy="285" r="6" fill="#7cf03d"/></g>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — 핵심 숫자 · 어디서나 · QR ============ -->
+<section class="page">
+  <div class="statusbar">
+    <span class="brandmark">Scam<b>Graph</b></span>
+    <span class="status-chip"><span class="dot"></span> BY THE NUMBERS</span>
+    <span class="spacer"></span>
+    <span class="pagemark">04 / 04</span>
+  </div>
+
+  <div class="p-head" style="padding-bottom:3mm;">
+    <span class="kicker">// 핵심 숫자</span>
+    <h2 class="h2">데모가 아니라, <span class="em">실제로 돌아간다</span></h2>
+  </div>
+
+  <div class="nums">
+    <div class="num-card"><div class="big">96.4<span style="font-size:26px;">%</span></div><div class="lbl">판정 정확도</div><div class="sub">라벨셋 기반 precision·recall·F1</div></div>
+    <div class="num-card"><div class="big danger">0</div><div class="lbl">오탐 (False Positive)</div><div class="sub">화이트리스트로 정상 도메인 보호</div></div>
+    <div class="num-card"><div class="big">7</div><div class="lbl">글로벌 위협 피드</div><div class="sub">OpenPhish · URLhaus · ThreatFox · 경찰청 외</div></div>
+    <div class="num-card"><div class="big">102<span style="font-size:24px;"> req/s</span></div><div class="lbl">실시간 처리량</div><div class="sub">부하 테스트(k6) 실측 스루풋</div></div>
+    <div class="num-card"><div class="big">10</div><div class="lbl">마이크로서비스</div><div class="sub">docker-compose 한 번에 기동</div></div>
+    <div class="num-card"><div class="big">~291</div><div class="lbl">자동화 테스트</div><div class="sub">CI로 매 변경 검증</div></div>
+  </div>
+
+  <div class="surfaces">
+    <span style="grid-column:1/-1;" class="kicker">// 어디서나 지킨다</span>
+    <div class="surface">
+      <div class="ic">🖥️</div>
+      <h4>웹 <span class="em">관제 대시보드</span></h4>
+      <p>스캔 콘솔·실시간 피드·관계망 그래프·위협 지도를 한 화면에서.</p>
+    </div>
+    <div class="surface">
+      <div class="ic">🧩</div>
+      <h4>크롬 <span class="em">확장</span></h4>
+      <p>브라우저 안의 방화벽. 위험 사이트를 방문 직전에 로컬에서 즉시 차단.</p>
+    </div>
+    <div class="surface">
+      <div class="ic">📱</div>
+      <h4>모바일 <span class="em">앱</span></h4>
+      <p>전화·문자를 실시간 탐지. 위험한 순간 직전에 경고합니다.</p>
+    </div>
+  </div>
+
+  <div class="qr-wrap">
+    <div class="qr-box">
+      <div class="qr-slot">발표 시<br />QR 삽입 자리</div>
+      <div class="qr-text">
+        <span class="k">▶ 폰으로 직접 체험</span>
+        <h3>QR 스캔 → 지금 바로 검사</h3>
+        <p>의심스러운 링크나 번호를 직접 넣어 보세요. 위험도와 근거, 그리고 관계망이 눈앞에서 펼쳐집니다.</p>
+        <span class="url-ph">[ 발표 시 공개 URL · QR 코드 자리 ]</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="l">
+      <span class="brandmark">Scam<b>Graph</b></span>
+      <div class="sub">실시간 사기·피싱 위협 인텔리전스 · 순수 SW · 설명 가능한 판정</div>
+    </div>
+    <div class="r">
+      메이커톤 출품작 · SDG <b>16 · 10</b><br />
+      안전한 디지털 세상
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

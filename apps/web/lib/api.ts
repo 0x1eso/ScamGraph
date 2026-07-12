@@ -3,7 +3,21 @@
 
 // 게이트웨이 베이스 URL — 모든 클라이언트(lib·컴포넌트)가 여기서 단일 소스로 가져다 쓴다.
 // (이전엔 ~15개 파일에서 동일 문자열을 재선언했음 → 여기로 중앙화.)
-export const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+//
+// 해석 규칙(도메인 배포 same-origin 지원):
+//  - NEXT_PUBLIC_GATEWAY_URL 이 절대 URL(http…)로 설정 → 그대로(명시 우선).
+//  - 그 외 로컬 개발(페이지가 localhost) → http://localhost:8080 (기존 동작 보존).
+//  - 그 외 도메인 배포(다른 오리진, 예: scamgraph.eserlic.cloud) → "" = 상대경로(/api/…).
+//    관람객이 폰으로 열어도 그 폰의 localhost 를 찾지 않고 같은 오리진(터널/프록시)으로 게이트웨이에 도달.
+function resolveGateway(): string {
+  const env = process.env.NEXT_PUBLIC_GATEWAY_URL;
+  if (env && env.startsWith("http")) return env;
+  if (typeof window === "undefined") return "http://localhost:8080";
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" ? "http://localhost:8080" : "";
+}
+
+export const GATEWAY = resolveGateway();
 
 // 데모 세이프 GET 헬퍼 — 어떤 실패(네트워크·비200·JSON 파싱)에도 예외를 던지지 않고
 // fallback을 돌려준다. "게이트웨이가 죽어도 화면은 시드로 즉시 렌더"라는 원칙의 공용 구현.

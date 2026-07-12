@@ -1,0 +1,26 @@
+# ScamGraph same-origin 리버스 프록시.
+# /api/* 와 /ws/* 는 게이트웨이(:8080)로, 나머지는 웹 대시보드(:3001)로 라우팅한다.
+# → 브라우저는 한 오리진만 보므로 CORS 없이 동작(도메인 배포의 핵심).
+#
+# 용도 1) 로컬 same-origin 검증:
+#   docker run --rm --network host -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile" caddy:2
+#   → http://localhost:8088 에서 대시보드+API가 한 오리진으로 동작 (= make proxy)
+# 용도 2) 공인 IP VPS 배포(자동 TLS): 아래 `:8088` 를 `scamgraph.eserlic.cloud` 로 바꾸면
+#   Caddy 가 Let's Encrypt 인증서를 자동 발급(서버가 80/443 공개 시). 이 경우 cloudflared 불필요.
+#
+# (Cloudflare 명명 터널 방식을 쓰면 cloudflared 가 동일 경로 라우팅을 하므로 Caddy 는 필요 없다.)
+
+:8088 {
+	@gateway path /api/* /ws/*
+	handle @gateway {
+		reverse_proxy localhost:8080
+	}
+	handle {
+		reverse_proxy localhost:3001
+	}
+
+	log {
+		output stderr
+		level WARN
+	}
+}
