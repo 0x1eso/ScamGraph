@@ -14,6 +14,9 @@ import CountUp from "./CountUp";
 import { fetchJson } from "@/lib/api";
 
 const POLL_MS = 40000;
+// 절단점이 실데이터에서 수십 개까지 늘어 킬샷이 칩 벽으로 뭉개진다.
+// 총계(cutCount)는 헤드라인에 진짜 값을 유지하되, 카드로는 상위 N개만 노출한다.
+const CUT_DISPLAY_LIMIT = 6;
 
 interface ComponentInfo {
   id: string;
