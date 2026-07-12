@@ -109,7 +109,7 @@ export default function ThreatTicker() {
           height: 8px;
           border-radius: 50%;
           background: var(--accent);
-          box-shadow: 0 0 0 0 rgba(0, 229, 192, 0.6);
+          box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.6);
           animation: tt-pulse 1.8s infinite;
         }
         .tt-live-text {
@@ -119,13 +119,13 @@ export default function ThreatTicker() {
         }
         @keyframes tt-pulse {
           0% {
-            box-shadow: 0 0 0 0 rgba(0, 229, 192, 0.5);
+            box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5);
           }
           70% {
-            box-shadow: 0 0 0 7px rgba(0, 229, 192, 0);
+            box-shadow: 0 0 0 7px rgba(79, 70, 229, 0);
           }
           100% {
-            box-shadow: 0 0 0 0 rgba(0, 229, 192, 0);
+            box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
           }
         }
 

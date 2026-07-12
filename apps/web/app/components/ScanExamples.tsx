@@ -14,15 +14,18 @@ interface ScanExample {
   tone: "danger" | "safe";
 }
 
-// 데모 시나리오 5종. 위험 4 + 정상 1(혼동문자 대비군으로 정상 naver를 나란히 둔다).
+// 데모 시나리오 5종. 첫 칩은 실제 '위험(danger)' 판정이 뜨는 브랜드 사칭 URL — 킬샷의 첫 화면.
+// 실측 등급(게이트웨이 /api/scan 확인): shinhan-otp.xyz=위험73 · kbstat-secure.click=위험76 ·
+//   nаver.com=경고50(혼동문자) · naver.com=안전0 · 070-8890-1234=주의20.
+//   tag는 공격 유형(규칙)을 설명할 뿐 등급을 문구로 단정하지 않는다 — 경고/주의 입력을 "위험"이라 부르지 않는다.
 // 주의: 2번 value의 두 번째 글자는 키릴 'а'(U+0430)로 라틴 'a'와 시각적으로 동일하다.
-// 정상 naver.com과 나란히 두면 "육안으로 구분 불가"라는 혼동문자 공격이 즉시 드러난다.
+// 바로 아래 정상 naver.com(3번)과 나란히 두면 "육안으로 구분 불가"라는 혼동문자 공격이 즉시 드러난다.
 // 절대 라틴 'a'로 '고치지' 말 것 — 이 차이가 시연의 핵심이다.
 const EXAMPLES: ReadonlyArray<ScanExample> = [
-  { value: "secure-tosspay.info", tag: "위협 피드 등재", tone: "danger" },
+  { value: "shinhan-otp.xyz", tag: "신한 사칭 · 위험", tone: "danger" },
   { value: "nаver.com", tag: "혼동 문자 · 키릴 а", tone: "danger" },
-  { value: "kbstar-otp.live", tag: "브랜드 사칭", tone: "danger" },
   { value: "naver.com", tag: "정상 대조군", tone: "safe" },
+  { value: "kbstat-secure.click", tag: "KB 유사 도메인 · 위험", tone: "danger" },
   { value: "070-8890-1234", tag: "보이스피싱 번호", tone: "danger" },
 ];
 

@@ -8,14 +8,18 @@ import { useEffect, useState } from "react";
 import { GATEWAY } from "@/lib/api";
 
 export default function ApiCallout() {
-  const [origin, setOrigin] = useState<string | null>(null);
+  // GATEWAY 는 서버(SSR)=localhost:8080, 클라(도메인)="" 로 값이 갈린다.
+  // 그대로 렌더하면 하이드레이션 불일치가 나므로, 초기값 null(서버·클라 첫 렌더 동일)로 두고
+  // 마운트 후에만 실제 게이트웨이/오리진으로 교체한다.
+  const [gw, setGw] = useState<string | null>(null);
   useEffect(() => {
-    setOrigin(GATEWAY || window.location.origin);
+    setGw(GATEWAY || window.location.origin);
   }, []);
-  // SSR·최초 렌더는 localhost:8080 로 동일하게 그려 하이드레이션 불일치를 피하고,
-  // 마운트 후 실제 오리진(도메인)으로 교체한다.
-  const base = origin ?? (GATEWAY || "http://localhost:8080");
-  const curl = `curl -X POST ${base}/api/scan -d '{"target":"..."}'`;
+  // 링크: 마운트 전엔 상대경로(도메인은 터널이 게이트웨이로 라우팅), 마운트 후 로컬은 localhost:8080.
+  const linkBase = gw ?? "";
+  // curl 표시: 접속 오리진 기준(도메인이면 도메인, 로컬이면 localhost:8080).
+  const curlBase = gw ?? "http://localhost:8080";
+  const curl = `curl -X POST ${curlBase}/api/scan -d '{"target":"..."}'`;
 
   return (
     <div className="api-callout">
@@ -29,10 +33,10 @@ export default function ApiCallout() {
       </pre>
 
       <div className="api-links">
-        <a className="api-chip primary" href={`${GATEWAY}/docs`} target="_blank" rel="noopener noreferrer">
+        <a className="api-chip primary" href={`${linkBase}/docs`} target="_blank" rel="noopener noreferrer">
           Swagger 문서 ↗
         </a>
-        <a className="api-chip" href={`${GATEWAY}/api/graph`} target="_blank" rel="noopener noreferrer">
+        <a className="api-chip" href={`${linkBase}/api/graph`} target="_blank" rel="noopener noreferrer">
           /api/graph ↗
         </a>
       </div>

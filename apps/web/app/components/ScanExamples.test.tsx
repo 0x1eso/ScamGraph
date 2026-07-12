@@ -8,8 +8,8 @@ describe("ScanExamples", () => {
     const { container } = render(<ScanExamples onPick={() => {}} />);
     expect(screen.getAllByRole("button")).toHaveLength(5);
     const vals = Array.from(container.querySelectorAll(".se-chip-val")).map((e) => e.textContent);
-    expect(vals).toContain("secure-tosspay.info");
-    expect(vals).toContain("kbstar-otp.live");
+    expect(vals).toContain("shinhan-otp.xyz");
+    expect(vals).toContain("kbstat-secure.click");
     expect(vals).toContain("naver.com");
     expect(vals).toContain("070-8890-1234");
   });
@@ -26,10 +26,10 @@ describe("ScanExamples", () => {
   it("칩 클릭 시 해당 값으로 onPick을 호출한다", () => {
     const onPick = vi.fn();
     render(<ScanExamples onPick={onPick} />);
-    const btn = screen.getByText("secure-tosspay.info").closest("button");
+    const btn = screen.getByText("shinhan-otp.xyz").closest("button");
     expect(btn).not.toBeNull();
     fireEvent.click(btn!);
-    expect(onPick).toHaveBeenCalledWith("secure-tosspay.info");
+    expect(onPick).toHaveBeenCalledWith("shinhan-otp.xyz");
   });
 
   it("disabled면 모든 칩이 비활성화되어 클릭이 무시된다", () => {

@@ -70,8 +70,8 @@ const SEED_CASE: CaseFile = {
 const GRADE_COLOR: Record<string, string> = {
   danger: "var(--danger)",
   warning: "var(--warn)",
-  caution: "var(--accent-2)",
-  safe: "var(--accent-2)",
+  caution: "var(--caution)",
+  safe: "var(--safe)",
   unknown: "var(--text-mute)",
 };
 const GRADE_KO: Record<string, string> = {
@@ -396,7 +396,7 @@ const CASEFILE_CSS = `
   background:
     radial-gradient(680px 260px at 100% 0%, rgba(255, 77, 109, 0.06), transparent 65%),
     linear-gradient(180deg, var(--bg-card), var(--bg-elev));
-  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0,0,0,0.4);
+  box-shadow: 0 40px 100px rgba(16, 24, 40, 0.22), 0 0 0 1px var(--line);
   overflow: hidden;
 }
 /* 종이 질감 결(미세 스캔라인) */
@@ -416,13 +416,13 @@ const CASEFILE_CSS = `
 .cf-punch {
   width: 9px; height: 9px; border-radius: 50%;
   background: var(--bg); border: 1px solid var(--line);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  box-shadow: inset 0 1px 2px rgba(16,24,40,0.12);
 }
 
 .cf-close {
   position: absolute; top: 12px; right: 14px; z-index: 5;
   width: 32px; height: 32px; border-radius: 8px;
-  border: 1px solid var(--line); background: rgba(8,11,17,0.7);
+  border: 1px solid var(--line); background: var(--bg-sunken);
   color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer;
   transition: border-color .16s ease, color .16s ease, background .16s ease;
 }
@@ -439,8 +439,9 @@ const CASEFILE_CSS = `
   transform: rotate(-11deg);
   opacity: 0.85;
   font-family: var(--mono);
-  mix-blend-mode: screen;
-  box-shadow: inset 0 0 0 1px rgba(255,77,109,0.4);
+  mix-blend-mode: multiply;
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 1px rgba(217,45,67,0.4);
 }
 .cf-stamp-en { font-size: 15px; font-weight: 800; letter-spacing: 3px; }
 .cf-stamp-ko { font-size: 10px; letter-spacing: 6px; }
@@ -463,7 +464,7 @@ const CASEFILE_CSS = `
 .cf-target-line { font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-bottom: 20px; word-break: break-all; }
 .cf-redactions { display: grid; gap: 12px; }
 .cf-redact { height: 14px; border-radius: 3px;
-  background: linear-gradient(90deg, #161c28, #0e131c);
+  background: linear-gradient(90deg, var(--bg-sunken), var(--line));
   animation: cf-shimmer 1.4s ease-in-out infinite;
 }
 @keyframes cf-pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
@@ -495,8 +496,8 @@ const CASEFILE_CSS = `
 }
 .cf-risk-danger { color: var(--danger); background: rgba(255,77,109,0.1); }
 .cf-risk-warning { color: var(--warn); background: rgba(255,176,32,0.1); }
-.cf-risk-caution { color: var(--accent-2); background: rgba(124,240,61,0.08); }
-.cf-risk-safe { color: var(--accent-2); background: rgba(124,240,61,0.08); }
+.cf-risk-caution { color: var(--caution); background: var(--caution-soft); }
+.cf-risk-safe { color: var(--safe); background: var(--safe-soft); }
 .cf-risk-unknown { color: var(--text-mute); background: rgba(120,132,154,0.08); }
 .cf-meta-sep { color: var(--line); }
 .cf-meta-k { color: var(--text-mute); }
@@ -514,22 +515,22 @@ const CASEFILE_CSS = `
 .cf-pivot-list { display: grid; gap: 10px; }
 .cf-pivot {
   border: 1px solid var(--accent); border-radius: 12px;
-  background: rgba(0, 229, 192, 0.06);
+  background: var(--accent-soft);
   padding: 12px 14px;
-  box-shadow: 0 0 0 1px rgba(0,229,192,0.05), 0 8px 30px rgba(0,229,192,0.06);
+  box-shadow: var(--shadow-sm);
 }
 .cf-pivot-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .cf-pivot-tag {
   font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
   padding: 3px 9px; border-radius: 6px; text-transform: uppercase;
-  background: var(--accent); color: #04120f; font-weight: 800;
+  background: var(--accent); color: var(--on-accent); font-weight: 800;
 }
 .cf-pivot-value { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent); word-break: break-all; }
 .cf-pivot-arrow { color: var(--text-mute); }
 .cf-pivot-count {
   margin-left: auto; font-family: var(--mono); font-size: 11px;
   padding: 2px 10px; border-radius: 999px;
-  background: rgba(0,229,192,0.12); color: var(--accent); white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent); white-space: nowrap;
 }
 .cf-pivot-connects { display: flex; flex-wrap: wrap; gap: 6px; }
 .cf-pivot-chip {

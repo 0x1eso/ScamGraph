@@ -40,7 +40,7 @@ cat <<'EOF'
 │  Neo4j 브라우저 http://localhost:7474           │
 └───────────────────────────────────────────────┘
 
-  킬샷 시연:  대시보드에서 secure-tosspay.info / nаver.com / 070-8890-1234 스캔
+  킬샷 시연:  대시보드에서 shinhan-otp.xyz / nаver.com / 070-8890-1234 스캔
   관람객 공개 URL(폰 체험):  make tunnel
   중지:  make down
 EOF

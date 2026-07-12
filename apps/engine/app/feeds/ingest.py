@@ -63,6 +63,15 @@ def ingest_all() -> dict:
     except Exception as e:  # noqa: BLE001
         graph_result = {"error": str(e)}
 
+    # 자율 발견 크롤러 — 이번 수집에서 나온 '새' host 를 크롤 큐로 흘려보낸다.
+    # (중복/재크롤 제어는 crawl_state 가 담당. 브로커/DB 불가 시 조용히 스킵 — 데모 세이프)
+    try:
+        from ..discovery import dispatch_feed_crawls
+
+        discovery_result = dispatch_feed_crawls(indicators)
+    except Exception as e:  # noqa: BLE001
+        discovery_result = {"error": str(e)}
+
     per_source: dict[str, int] = {}
     for ind in indicators:
         per_source[ind.source] = per_source.get(ind.source, 0) + 1
@@ -72,4 +81,5 @@ def ingest_all() -> dict:
         "per_source": per_source,
         "pg": pg_result,
         "graph": graph_result,
+        "discovery": discovery_result,
     }
