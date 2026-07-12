@@ -97,8 +97,10 @@ services:
 
   web:
     build: ./apps/web
-    environment:
-      NEXT_PUBLIC_GATEWAY_URL: http://localhost:8080
+    # NEXT_PUBLIC_GATEWAY_URL 을 의도적으로 두지 않는다.
+    # 설정하면 lib/api.ts 의 resolveGateway() 가 이 값을 최우선으로 써서
+    # 도메인 배포에서도 모든 API·링크가 localhost:8080 으로 고정된다(폰/타 기기에서 깨짐).
+    # 비워 두면 브라우저가 접속 오리진을 런타임 감지 → localhost 는 :8080, 도메인은 상대경로.
     ports: ["3001:3000"]
     volumes:
       - ./apps/web:/app

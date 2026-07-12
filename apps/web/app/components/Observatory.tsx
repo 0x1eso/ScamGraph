@@ -73,6 +73,18 @@ const SEED: Analytics = {
   ],
 };
 
+// top_hub 은 백엔드가 문자열 또는 {label,node,type,degree} 객체로 줄 수 있다.
+// 항상 문자열로 정규화해 React child(객체 렌더) 크래시를 원천 차단한다.
+function hubLabel(hub: unknown): string {
+  if (typeof hub === "string") return hub;
+  if (hub && typeof hub === "object") {
+    const h = hub as Record<string, unknown>;
+    if (typeof h.label === "string") return h.label;
+    if (typeof h.node === "string") return h.node;
+  }
+  return "—";
+}
+
 // 배열 필드가 비어 오면 시드로 메워 항상 렌더 가능한 형태로 정규화(방어적).
 function normalize(raw: unknown): Analytics {
   if (!raw || typeof raw !== "object") {
@@ -81,10 +93,18 @@ function normalize(raw: unknown): Analytics {
   const d = raw as Partial<Analytics>;
   const arr = <T,>(v: unknown, fallback: T[]): T[] =>
     Array.isArray(v) && v.length > 0 ? (v as T[]) : fallback;
+  // components 는 top_hub 가 객체로 올 수 있어 필드별로 좁혀 안전한 형태로 재구성한다.
+  const components: ComponentInfo[] = Array.isArray(d.components)
+    ? (d.components as Array<Record<string, unknown>>).map((c) => ({
+        id: typeof c?.id === "string" ? c.id : "—",
+        size: typeof c?.size === "number" ? c.size : 0,
+        top_hub: hubLabel(c?.top_hub),
+      }))
+    : [];
   return {
     node_count: typeof d.node_count === "number" ? d.node_count : SEED.node_count,
     edge_count: typeof d.edge_count === "number" ? d.edge_count : SEED.edge_count,
-    components: arr<ComponentInfo>(d.components, SEED.components),
+    components: components.length > 0 ? components : SEED.components,
     top_degree: arr<DegreeNode>(d.top_degree, SEED.top_degree),
     top_betweenness: arr<BetweennessNode>(d.top_betweenness, SEED.top_betweenness),
     articulation_points: arr<Articulation>(d.articulation_points, SEED.articulation_points),
@@ -131,11 +151,7 @@ export default function Observatory() {
     <div className="obs" role="region" aria-label="관계망 그래프 조직 단위 분석">
       <div className="obs-head">
         <div className="obs-head-left">
-          <div className="obs-k">// 그래프 관제 · 조직 단위 분석</div>
-          <p className="obs-lede">
-            개별 신고를 넘어 <b>사기 인프라의 구조</b>를 읽는다. 국가기관도 잘 보지 못하는
-            <b> 조직 단위 연결·길목·급소</b>를 그래프 이론으로 드러낸다.
-          </p>
+          <div className="obs-k">조직 단위 분석</div>
         </div>
         <div className="obs-scale" aria-label="분석 대상 규모">
           <span className="obs-scale-item">
@@ -153,7 +169,7 @@ export default function Observatory() {
         <div className="obs-cut-head">
           <span className="obs-cut-badge">차단 우선순위</span>
           <span className="obs-cut-title">
-            핵심 인프라 <b>{cutCount}</b>개 — 차단 시 확인된 캠페인 클러스터가 <b>물리적으로 분리</b>됩니다
+            핵심 인프라 <b>{cutCount}</b>개 — 차단 시 조직이 <b>분리</b>됩니다
           </span>
         </div>
         <ul className="obs-cut-list">
@@ -165,10 +181,6 @@ export default function Observatory() {
             </li>
           ))}
         </ul>
-        <p className="obs-cut-note">
-          절단점(articulation point) = 제거 시 그래프가 둘 이상으로 쪼개지는 노드. 한정된 단속
-          자원을 <b>가장 파급이 큰 급소</b>에 집중하도록 근거를 제공합니다.
-        </p>
       </section>
 
       <div className="obs-cols">

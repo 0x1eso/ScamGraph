@@ -1,14 +1,22 @@
 "use client";
 
-// ScamGraph — 공개 API 홍보 배너 (클라이언트 아일랜드)
-// 다른 개발자가 위협 데이터를 조회/스캔할 수 있음을 알리고 Swagger 문서로 안내한다.
-// 팔레트 토큰(globals.css)을 재사용하고, 추가 스타일은 스코프드 <style> 블록에 둔다.
+// ScamGraph — 공개 API 안내 (클라이언트 아일랜드)
+// 표시용 curl 은 접속 오리진 기준으로 만든다(도메인이면 도메인, 로컬이면 localhost:8080).
+// 링크는 ${GATEWAY} 기준 — 도메인에선 상대경로가 되어 터널이 게이트웨이로 라우팅한다.
 
+import { useEffect, useState } from "react";
 import { GATEWAY } from "@/lib/api";
 
-const CURL = `curl -X POST ${GATEWAY}/api/scan -d '{"target":"..."}'`;
-
 export default function ApiCallout() {
+  const [origin, setOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    setOrigin(GATEWAY || window.location.origin);
+  }, []);
+  // SSR·최초 렌더는 localhost:8080 로 동일하게 그려 하이드레이션 불일치를 피하고,
+  // 마운트 후 실제 오리진(도메인)으로 교체한다.
+  const base = origin ?? (GATEWAY || "http://localhost:8080");
+  const curl = `curl -X POST ${base}/api/scan -d '{"target":"..."}'`;
+
   return (
     <div className="api-callout">
       <div className="api-head">
@@ -16,29 +24,15 @@ export default function ApiCallout() {
         <span className="api-badge">REST</span>
       </div>
 
-      <p className="api-lede">
-        다른 개발자가 ScamGraph 위협 데이터를 조회할 수 있습니다
-      </p>
-
       <pre className="api-snippet">
-        <code>{CURL}</code>
+        <code>{curl}</code>
       </pre>
 
       <div className="api-links">
-        <a
-          className="api-chip primary"
-          href={`${GATEWAY}/docs`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a className="api-chip primary" href={`${GATEWAY}/docs`} target="_blank" rel="noopener noreferrer">
           Swagger 문서 ↗
         </a>
-        <a
-          className="api-chip"
-          href={`${GATEWAY}/api/graph`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a className="api-chip" href={`${GATEWAY}/api/graph`} target="_blank" rel="noopener noreferrer">
           /api/graph ↗
         </a>
       </div>
@@ -54,10 +48,11 @@ const API_CSS = `
   border-radius: 14px;
   padding: 24px;
   background:
-    radial-gradient(600px 200px at 90% -20%, rgba(0, 229, 192, 0.1), transparent 60%),
+    radial-gradient(600px 200px at 90% -20%, rgba(79, 70, 229, 0.07), transparent 60%),
     var(--bg-card);
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .api-head { display: flex; align-items: center; gap: 12px; }
 .api-title {
@@ -76,25 +71,19 @@ const API_CSS = `
   border: 1px solid var(--line);
   color: var(--accent);
 }
-.api-lede {
-  margin-top: 12px;
-  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem);
-  color: var(--text);
-  font-weight: 600;
-}
 .api-snippet {
   margin-top: 16px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--bg);
+  background: var(--bg-sunken);
   overflow-x: auto;
 }
 .api-snippet code {
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--accent-2);
+  color: var(--text);
   white-space: pre;
 }
 .api-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
@@ -110,13 +99,13 @@ const API_CSS = `
   border: 1px solid var(--line);
   color: var(--text-dim);
   text-decoration: none;
-  transition: border-color 0.16s ease, color 0.16s ease, transform 0.12s ease;
+  transition: border-color 0.16s ease, color 0.16s ease, transform 0.12s ease, box-shadow 0.2s ease;
 }
 .api-chip:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
 .api-chip.primary {
   background: var(--accent);
-  color: #04120f;
+  color: var(--on-accent);
   border-color: var(--accent);
 }
-.api-chip.primary:hover { box-shadow: 0 8px 30px rgba(0, 229, 192, 0.25); }
+.api-chip.primary:hover { background: var(--accent-strong); box-shadow: var(--shadow-accent); }
 `;

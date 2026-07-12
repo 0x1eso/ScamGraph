@@ -13,40 +13,41 @@ import { mockGraph, type GraphData, type GraphNode } from "@/app/data/mockGraph"
 
 // 등급 색 — page 디자인 토큰과 동일 팔레트
 const GRADE_COLORS: Record<NonNullable<GraphNode["grade"]>, string> = {
-  danger: "#ff4d6d",
-  warning: "#ffb020",
-  caution: "#c0cf3d",
-  safe: "#7cf03d",
+  danger: "#d92d43",
+  warning: "#d97706",
+  caution: "#ca8a04",
+  safe: "#0d9f6e",
 };
 
-// 등급이 없는 노드는 타입별 중립색
+// 등급이 없는 노드는 타입별 중립색 — 흰 배경에서도 또렷하게 대비
 const TYPE_COLORS: Record<GraphNode["type"], string> = {
-  IP: "#4aa3ff",
-  Host: "#8a97ad",
-  Campaign: "#c58cff",
-  Phone: "#00e5c0",
-  Account: "#7cf03d",
-  Report: "#566072",
-  Target: "#8a97ad",
+  IP: "#2563eb",
+  Host: "#475569",
+  Campaign: "#7c3aed",
+  Phone: "#0891b2",
+  Account: "#0d9f6e",
+  Report: "#64748b",
+  Target: "#475569",
 };
 
-// HOSTED_ON 은 공유 IP로 이어지는 결정적 단서 → 액센트로 강조
+// HOSTED_ON 은 공유 IP로 이어지는 결정적 단서 → 인디고 액센트로 강조.
+// 나머지 간선은 연한 회색으로 물러나 노드가 도드라지게 한다.
 const EDGE_COLORS: Record<string, string> = {
-  HOSTED_ON: "#00e5c0",
-  USES: "#33405c",
-  RESOLVES_TO: "#2a3348",
-  CONTACT: "#2a3348",
-  PAYOUT: "#2a3348",
-  REPORTS: "#2a3348",
+  HOSTED_ON: "#4f46e5",
+  USES: "#cbd5e1",
+  RESOLVES_TO: "#cbd5e1",
+  CONTACT: "#cbd5e1",
+  PAYOUT: "#cbd5e1",
+  REPORTS: "#cbd5e1",
 };
 
 const MONO = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace';
-const DIM_COLOR = "#20283a";
+const DIM_COLOR = "#d3d8e0";
 
 function colorForNode(node: GraphNode): string {
   if (node.grade) return GRADE_COLORS[node.grade];
   // Registrant/Cert 등 신규 타입은 회색 폴백
-  return TYPE_COLORS[node.type] ?? "#5a6478";
+  return TYPE_COLORS[node.type] ?? "#94a3b8";
 }
 
 // 캠페인·공유 IP·타깃을 허브로 크게, 나머지는 작게
@@ -113,7 +114,7 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
       if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) return;
       graph.mergeEdge(edge.source, edge.target, {
         label: edge.type,
-        color: EDGE_COLORS[edge.type] ?? "#2a3348",
+        color: EDGE_COLORS[edge.type] ?? "#cbd5e1",
         size: edge.type === "HOSTED_ON" ? 2.4 : 1,
       });
     });
@@ -132,13 +133,13 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
     const renderer = new Sigma(graph, container, {
       renderLabels: true,
       renderEdgeLabels: true,
-      labelColor: { color: "#c7d0de" },
+      labelColor: { color: "#0e1526" },
       labelSize: 12,
       labelFont: MONO,
-      edgeLabelColor: { color: "#566072" },
+      edgeLabelColor: { color: "#64748b" },
       edgeLabelSize: 10,
       edgeLabelFont: MONO,
-      defaultEdgeColor: "#242c3e",
+      defaultEdgeColor: "#dbe0e6",
       minCameraRatio: 0.4,
       maxCameraRatio: 3,
     });
@@ -157,7 +158,7 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
       if (focusIdRef.current && node === focusIdRef.current) {
         a = {
           ...a,
-          color: "#5ffbe0",
+          color: "#4f46e5",
           size: (attrs.size ?? 7) * pulseRef.current,
           zIndex: 10,
           forceLabel: true,
@@ -253,7 +254,7 @@ export default function GraphExplorer({ data = mockGraph, focusId, onOpenCaseFil
           height: 520,
           borderRadius: 14,
           border: "1px solid var(--line)",
-          background: "var(--bg-elev, #0c1018)",
+          background: "var(--bg-elev, #fafbfc)",
           overflow: "hidden",
         }}
       />
@@ -293,12 +294,12 @@ function Legend() {
         gap: 12,
         padding: "8px 12px",
         borderRadius: 10,
-        border: "1px solid var(--line)",
-        background: "rgba(8, 11, 17, 0.72)",
-        backdropFilter: "blur(8px)",
+        border: "1px solid var(--line, #e4e7ec)",
+        background: "var(--bg-card, #ffffff)",
+        boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06)",
         fontFamily: MONO,
         fontSize: 11,
-        color: "var(--text-dim, #8a97ad)",
+        color: "var(--text-dim, #475069)",
       }}
     >
       {items.map((it) => (
@@ -309,7 +310,6 @@ function Legend() {
               height: 9,
               borderRadius: "50%",
               background: it.color,
-              boxShadow: `0 0 8px ${it.color}66`,
             }}
           />
           {it.label}
@@ -343,10 +343,10 @@ function NodePanel({
         width: 248,
         padding: 16,
         borderRadius: 12,
-        border: "1px solid var(--line)",
+        border: "1px solid var(--line, #e4e7ec)",
         borderLeft: `3px solid ${accent}`,
-        background: "rgba(12, 16, 24, 0.92)",
-        backdropFilter: "blur(10px)",
+        background: "var(--bg-card, #ffffff)",
+        boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.10)",
         fontFamily: "var(--sans, system-ui)",
       }}
     >
@@ -360,7 +360,7 @@ function NodePanel({
           style={{
             background: "transparent",
             border: "none",
-            color: "var(--text-mute, #566072)",
+            color: "var(--text-mute, #5b6577)",
             cursor: "pointer",
             fontSize: 16,
             lineHeight: 1,
@@ -376,7 +376,7 @@ function NodePanel({
           marginTop: 8,
           fontSize: 15,
           fontWeight: 700,
-          color: "var(--text, #e7ecf4)",
+          color: "var(--text, #0e1526)",
           wordBreak: "break-all",
         }}
       >
@@ -400,7 +400,7 @@ function NodePanel({
             {node.grade}
           </span>
           {typeof node.risk_score === "number" && (
-            <span style={{ fontFamily: MONO, fontSize: 12, color: "var(--text-dim, #8a97ad)" }}>
+            <span style={{ fontFamily: MONO, fontSize: 12, color: "var(--text-dim, #475069)" }}>
               risk {node.risk_score}
             </span>
           )}
@@ -408,7 +408,7 @@ function NodePanel({
       )}
 
       {typeof node.risk_score === "number" && (
-        <div style={{ marginTop: 10, height: 6, borderRadius: 3, background: "var(--line, #1b2231)", overflow: "hidden" }}>
+        <div style={{ marginTop: 10, height: 6, borderRadius: 3, background: "var(--line, #eef0f4)", overflow: "hidden" }}>
           <div
             style={{
               width: `${Math.min(100, Math.max(0, node.risk_score))}%`,
@@ -429,9 +429,9 @@ function NodePanel({
             width: "100%",
             padding: "9px 12px",
             borderRadius: 9,
-            border: "1px solid var(--danger, #ff4d6d)",
-            background: "rgba(255, 77, 109, 0.1)",
-            color: "var(--danger, #ff4d6d)",
+            border: "1px solid var(--danger, #d92d43)",
+            background: "rgba(217, 45, 67, 0.1)",
+            color: "var(--danger, #d92d43)",
             fontFamily: MONO,
             fontSize: 12,
             fontWeight: 700,

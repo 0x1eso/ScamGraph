@@ -10,15 +10,17 @@
 #   make serve          # 웹을 same-origin 모드로 기동
 #   make tunnel-domain  # 명명 터널 실행 → https://scamgraph.eserlic.cloud 공개
 #
-# ingress 는 위→아래로 첫 매칭 규칙 적용. /api·/ws 는 게이트웨이, 나머지는 웹으로.
-# (WebSocket /ws/feed 는 cloudflared 가 업그레이드를 그대로 통과시킨다.)
+# ingress 는 위→아래로 첫 매칭 규칙 적용. 게이트웨이(:8080)로 보내는 경로:
+#   /api·/ws        — REST API · WebSocket 피드
+#   /docs·/swagger-ui·/v3/api-docs·/webjars — Swagger 공개 API 문서(도메인에서도 열리게)
+# 나머지는 전부 웹(:3001). (WebSocket /ws/feed 는 cloudflared 가 업그레이드를 그대로 통과.)
 
 tunnel: <TUNNEL_ID>
 credentials-file: /home/eser/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
   - hostname: scamgraph.eserlic.cloud
-    path: '^/(api|ws)/'
+    path: '^/(api/|ws/|docs|swagger-ui|v3/api-docs|webjars)'
     service: http://localhost:8080
   - hostname: scamgraph.eserlic.cloud
     service: http://localhost:3001

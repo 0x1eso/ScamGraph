@@ -17,7 +17,7 @@ const MAX_ROWS = 30;
 const GRADE_COLOR: Record<NonNullable<FeedEvent["grade"]>, string> = {
   danger: "var(--danger)",
   warning: "var(--warn)",
-  caution: "#c0cf3d",
+  caution: "#ca8a04",
   safe: "var(--accent-2)",
 };
 

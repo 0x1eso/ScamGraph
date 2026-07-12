@@ -30,25 +30,26 @@ import {
 
 // ── 디자인 토큰(globals.css 와 동일 팔레트) ──
 const COLOR = {
-  danger: "#ff4d6d",
-  warning: "#ffb020",
-  caution: "#c0cf3d",
-  safe: "#7cf03d",
-  accent: "#00e5c0",
-  grid: "#1b2231",
-  tick: "#8a97ad",
+  danger: "#d92d43",
+  warning: "#d97706",
+  caution: "#ca8a04",
+  safe: "#0d9f6e",
+  accent: "#4f46e5",
+  grid: "#e4e7ec",
+  tick: "#5b6577",
 } as const;
 
 const AXIS_TICK = { fill: COLOR.tick, fontSize: 11, fontFamily: "var(--mono)" };
 
-// 다크 테마 툴팁 — recharts 기본 흰 배경을 토큰 컬러로 덮어쓴다.
+// 라이트 테마 툴팁 — recharts 기본 스타일을 토큰 컬러로 덮어쓴다.
 const TOOLTIP_STYLE = {
-  background: "rgba(12, 16, 24, 0.94)",
-  border: "1px solid var(--line)",
+  background: "#ffffff",
+  border: "1px solid #e4e7ec",
   borderRadius: 10,
+  boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06)",
   fontFamily: "var(--mono)",
   fontSize: 12,
-  color: "#e7ecf4",
+  color: "#0e1526",
 } as const;
 
 // ── 데모 세이프 시드 값 — 백엔드가 없어도 그럴듯한 숫자에서 출발한다 ──
@@ -198,7 +199,7 @@ export default function AdminDashboard() {
                       <Cell key={d.key} fill={d.fill} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: "#e7ecf4" }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: "#0e1526" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -223,9 +224,9 @@ export default function AdminDashboard() {
                   <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
                   <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={44} />
                   <Tooltip
-                    cursor={{ fill: "rgba(0,229,192,0.06)" }}
+                    cursor={{ fill: "rgba(79,70,229,0.06)" }}
                     contentStyle={TOOLTIP_STYLE}
-                    itemStyle={{ color: "#e7ecf4" }}
+                    itemStyle={{ color: "#0e1526" }}
                   />
                   <Bar dataKey="value" fill={COLOR.accent} radius={[6, 6, 0, 0]} maxBarSize={64} />
                 </BarChart>
@@ -249,7 +250,7 @@ export default function AdminDashboard() {
                   <CartesianGrid stroke={COLOR.grid} vertical={false} />
                   <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
                   <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={44} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: "#e7ecf4" }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ color: "#0e1526" }} />
                   <Area
                     type="monotone"
                     dataKey="count"
@@ -384,7 +385,7 @@ export default function AdminDashboard() {
           vertical-align: middle;
         }
         tbody tr:last-child td { border-bottom: none; }
-        tbody tr:hover td { background: rgba(0, 229, 192, 0.03); }
+        tbody tr:hover td { background: rgba(79, 70, 229, 0.04); }
         .mono { font-family: var(--mono); }
         td.target { color: var(--text); max-width: 260px; word-break: break-all; font-size: 13px; }
         td.note { color: var(--text-dim); font-size: 13px; max-width: 240px; }
@@ -407,9 +408,9 @@ export default function AdminDashboard() {
           border-radius: 999px;
           border: 1px solid var(--line);
         }
-        .badge.ok { color: var(--accent-2); border-color: rgba(124, 240, 61, 0.4); }
-        .badge.no { color: var(--danger); border-color: rgba(255, 77, 109, 0.4); }
-        .badge.wait { color: var(--warn); border-color: rgba(255, 176, 32, 0.4); }
+        .badge.ok { color: var(--accent-2); border-color: rgba(13, 159, 110, 0.4); }
+        .badge.no { color: var(--danger); border-color: rgba(217, 45, 67, 0.4); }
+        .badge.wait { color: var(--warn); border-color: rgba(217, 119, 6, 0.4); }
 
         .mini {
           font-family: var(--mono);

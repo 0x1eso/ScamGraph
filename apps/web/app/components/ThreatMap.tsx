@@ -2,7 +2,7 @@
 
 // ScamGraph — 실시간 위협 지도 (deck.gl · GPU 렌더링)
 // 사기 인프라의 지리적 출발점을 점으로, 공격 궤적을 타깃(서울)으로 수렴하는
-// 호(arc)로 그린다. 외부 타일/베이스맵 없이 다크 컨테이너 위에 레이어만 얹어
+// 호(arc)로 그린다. 외부 타일/베이스맵 없이 밝은 컨테이너 위에 레이어만 얹어
 // 오프라인에서도 동작한다. 색은 장식이 아니라 위험 등급의 의미로 쓴다.
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,12 +14,12 @@ import { mockThreats, TARGET_CENTER, type Threat } from "@/app/data/mockThreats"
 
 // 등급 → RGB. GraphExplorer 팔레트와 동일한 의미 색.
 const GRADE_RGB: Record<Threat["grade"], [number, number, number]> = {
-  danger: [255, 77, 109],
-  warning: [255, 176, 32],
-  caution: [192, 207, 61],
-  safe: [124, 240, 61],
+  danger: [217, 45, 67],
+  warning: [217, 119, 6],
+  caution: [202, 138, 4],
+  safe: [13, 159, 110],
 };
-const ACCENT_RGB: [number, number, number] = [0, 229, 192]; // --accent, 타깃 색
+const ACCENT_RGB: [number, number, number] = [79, 70, 229]; // --accent(인디고), 타깃 색
 
 const MONO = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace';
 
@@ -179,8 +179,8 @@ export default function ThreatMap() {
         width: "100%",
         height: 520,
         borderRadius: 14,
-        border: "1px solid var(--line, #1b2231)",
-        background: "var(--bg-elev, #0c1018)",
+        border: "1px solid var(--line, #e4e7ec)",
+        background: "var(--bg, #f4f5f8)",
         overflow: "hidden",
       }}
     >
@@ -209,11 +209,12 @@ function renderTooltip(info: PickingInfo) {
   return {
     html: `<b>${object.label}</b><br/>risk ${object.risk} · ${object.grade}`,
     style: {
-      background: "rgba(12, 16, 24, 0.94)",
-      color: "#e7ecf4",
-      border: "1px solid #1b2231",
+      background: "#ffffff",
+      color: "#0e1526",
+      border: "1px solid #e4e7ec",
       borderRadius: "8px",
       padding: "8px 10px",
+      boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.10)",
       fontFamily: MONO,
       fontSize: "11px",
     },
@@ -233,13 +234,13 @@ function TitleChip() {
         gap: 8,
         padding: "7px 12px",
         borderRadius: 10,
-        border: "1px solid var(--line, #1b2231)",
-        background: "rgba(8, 11, 17, 0.72)",
-        backdropFilter: "blur(8px)",
+        border: "1px solid var(--line, #e4e7ec)",
+        background: "var(--bg-card, #ffffff)",
+        boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06)",
         fontFamily: MONO,
         fontSize: 12,
         letterSpacing: 1,
-        color: "var(--accent, #00e5c0)",
+        color: "var(--accent, #4f46e5)",
       }}
     >
       <span
@@ -247,8 +248,8 @@ function TitleChip() {
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: "var(--accent-2, #7cf03d)",
-          boxShadow: "0 0 8px rgba(124, 240, 61, 0.7)",
+          background: "var(--accent-2, #0d9f6e)",
+          boxShadow: "0 0 8px rgba(13, 159, 110, 0.45)",
         }}
       />
       {"// 실시간 위협 지도"}
@@ -269,16 +270,16 @@ function GovBadge() {
         gap: 7,
         padding: "7px 12px",
         borderRadius: 10,
-        border: "1px solid var(--line, #1b2231)",
-        background: "rgba(8, 11, 17, 0.72)",
-        backdropFilter: "blur(8px)",
+        border: "1px solid var(--line, #e4e7ec)",
+        background: "var(--bg-card, #ffffff)",
+        boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06)",
         fontFamily: MONO,
         fontSize: 11,
         letterSpacing: 0.5,
-        color: "var(--text-dim, #8a97ad)",
+        color: "var(--text-dim, #475069)",
       }}
     >
-      <span style={{ color: "var(--accent, #00e5c0)" }} aria-hidden="true">
+      <span style={{ color: "var(--accent, #4f46e5)" }} aria-hidden="true">
         ◆
       </span>
       정부 데이터 · 경찰청
@@ -305,12 +306,12 @@ function Legend() {
         gap: 12,
         padding: "8px 12px",
         borderRadius: 10,
-        border: "1px solid var(--line, #1b2231)",
-        background: "rgba(8, 11, 17, 0.72)",
-        backdropFilter: "blur(8px)",
+        border: "1px solid var(--line, #e4e7ec)",
+        background: "var(--bg-card, #ffffff)",
+        boxShadow: "0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06)",
         fontFamily: MONO,
         fontSize: 11,
-        color: "var(--text-dim, #8a97ad)",
+        color: "var(--text-dim, #475069)",
       }}
     >
       {items.map((it) => (
@@ -321,7 +322,6 @@ function Legend() {
               height: 9,
               borderRadius: "50%",
               background: it.color,
-              boxShadow: `0 0 8px ${it.color}`,
             }}
           />
           {it.label}

@@ -7,42 +7,78 @@
   font-style: normal;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   ScamGraph — Light Editorial 디자인 시스템
+   방향: Stripe/Linear 톤. 밝은 캔버스 · 흰 카드 · 강한 타이포 위계 ·
+   시맨틱 컬러 데이터 · 소프트 그림자 깊이(발광 아님) · 넉넉한 리듬.
+   ───────────────────────────────────────────────────────────── */
 :root {
-  --bg: #06080d;
-  --bg-elev: #0c1018;
-  --bg-card: #10151f;
-  --line: #1b2231;
-  --text: #e7ecf4;
-  --text-dim: #8a97ad;
-  /* WCAG AA: nudged from #566072 (~3.1:1) so muted text clears 4.5:1 on the
-     dark surfaces it sits on, while staying dimmer than --text-dim. */
-  --text-mute: #78849a;
-  --accent: #00e5c0;
-  --accent-2: #7cf03d;
-  --danger: #ff4d6d;
-  --warn: #ffb020;
+  /* 표면(캔버스<카드) — 위로 갈수록 밝아지는 라이트 깊이 */
+  --bg: #f4f5f8;         /* 앱 캔버스(연한 쿨그레이) */
+  --bg-elev: #fafbfc;    /* 살짝 든 표면(콘솔 상단광 등) */
+  --bg-card: #ffffff;    /* 카드(흰색) */
+  --bg-sunken: #eef0f4;  /* 인셋(입력 필드 등) */
+
+  /* 라인/보더 — 헤어라인 */
+  --line: #e4e7ec;
+  --line-strong: #d3d8e0;
+
+  /* 텍스트 — 정제된 잉크(순검정 아님) */
+  --text: #0e1526;       /* 본문/제목 */
+  --text-dim: #475069;   /* 보조 */
+  --text-mute: #5b6577;  /* 뮤트(AA≥4.5:1 on white) */
+
+  /* 브랜드/인터랙티브 — 인디고 */
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-soft: #eef0ff;    /* 인디고 틴트 배경 */
+  --on-accent: #ffffff;
+
+  /* 시맨틱 데이터 팔레트(위험 등급/상태) */
+  --accent-2: #0d9f6e;   /* positive/live/safe (에메랄드) */
+  --danger: #d92d43;     /* danger 등급(레드) */
+  --warn: #d97706;       /* warning 등급(앰버) */
+  --caution: #ca8a04;    /* caution 등급(옐로/골드) */
+  --safe: #0d9f6e;       /* safe 등급 */
+
+  /* 시맨틱 소프트 배경(등급 배지 등 라이트 틴트) */
+  --danger-soft: #fdecee;
+  --warn-soft: #fdf1e3;
+  --caution-soft: #fbf5e0;
+  --safe-soft: #e5f6ef;
+
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   --sans: "Pretendard Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+
+  /* 깊이 — 소프트 레이어드 그림자(라이트) */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 2px 6px rgba(16, 24, 40, 0.05), 0 8px 20px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 4px 10px rgba(16, 24, 40, 0.05), 0 18px 40px rgba(16, 24, 40, 0.10);
+  --shadow-accent: 0 8px 24px rgba(79, 70, 229, 0.22);
+
   /* 모션 토큰 — 일관된 이징/듀레이션 */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 160ms;
   --dur-normal: 320ms;
+
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(0, 229, 192, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 0% 10%, rgba(124, 240, 61, 0.05), transparent 55%),
+    radial-gradient(1100px 560px at 84% -8%, rgba(79, 70, 229, 0.06), transparent 62%),
+    radial-gradient(880px 480px at -4% 4%, rgba(13, 159, 110, 0.05), transparent 58%),
     var(--bg);
   color: var(--text);
   font-family: var(--sans);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* subtle grid texture */
+/* 블루프린트 그리드 — 아주 옅게. '기술/관제' 뉘앙스는 유지하되 라이트하게 정제 */
 body::before {
   content: "";
   position: fixed;
@@ -50,8 +86,10 @@ body::before {
   background-image:
     linear-gradient(var(--line) 1px, transparent 1px),
     linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.15;
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(1200px 700px at 50% -10%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(1200px 700px at 50% -10%, #000 30%, transparent 78%);
+  opacity: 0.5;
   pointer-events: none;
   z-index: 0;
 }
@@ -65,70 +103,89 @@ main { position: relative; z-index: 1; }
   gap: 20px;
   padding: 12px 28px;
   border-bottom: 1px solid var(--line);
-  background: rgba(8, 11, 17, 0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-mute);
   flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
-.brandmark { color: var(--text); font-weight: 700; letter-spacing: 0.5px; }
+.brandmark { color: var(--text); font-weight: 700; letter-spacing: 0.3px; }
 .brandmark b { color: var(--accent); }
 .dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--accent-2);
-  box-shadow: 0 0 0 0 rgba(124, 240, 61, 0.6);
+  box-shadow: 0 0 0 0 rgba(13, 159, 110, 0.5);
   animation: pulse 1.8s infinite;
   display: inline-block;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(124, 240, 61, 0.5); }
-  70% { box-shadow: 0 0 0 8px rgba(124, 240, 61, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(124, 240, 61, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(13, 159, 110, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(13, 159, 110, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 159, 110, 0); }
 }
 .svc { display: inline-flex; align-items: center; gap: 6px; }
 .spacer { flex: 1; }
 
 /* ── layout ── */
-.wrap { max-width: 1180px; margin: 0 auto; padding: 56px 28px 96px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 64px 28px 104px; }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--accent);
+  font-weight: 600;
+}
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 1.5px;
+  background: var(--accent);
+  display: inline-block;
 }
 .hero-title {
-  font-size: clamp(2.6rem, 1rem + 6vw, 5.2rem);
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  margin: 14px 0 18px;
-  font-weight: 800;
+  font-size: clamp(2.7rem, 1rem + 6.4vw, 5.6rem);
+  line-height: 0.96;
+  letter-spacing: -0.035em;
+  margin: 18px 0 20px;
+  font-weight: 850;
+  color: var(--text);
 }
 .hero-title span { color: var(--accent); }
 .lede {
-  max-width: 640px;
-  font-size: clamp(1rem, 0.9rem + 0.4vw, 1.2rem);
+  max-width: 620px;
+  font-size: clamp(1.05rem, 0.94rem + 0.5vw, 1.28rem);
   color: var(--text-dim);
-  line-height: 1.6;
+  line-height: 1.62;
+  font-weight: 420;
 }
 
 /* ── scan console ── */
 .console {
-  margin: 40px 0 8px;
+  margin: 44px 0 8px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, var(--bg-card), var(--bg-elev));
   overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 .console-head {
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 16px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 12px;
   color: var(--text-mute);
+  background: var(--bg-elev);
 }
 .led { width: 10px; height: 10px; border-radius: 50%; }
 .led.r { background: #ff5f56; } .led.y { background: #ffbd2e; } .led.g { background: #27c93f; }
@@ -136,50 +193,60 @@ main { position: relative; z-index: 1; }
 .console-body input {
   flex: 1;
   min-width: 260px;
-  background: var(--bg);
+  background: var(--bg-sunken);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 11px;
   color: var(--text);
   font-family: var(--mono);
   font-size: 15px;
   padding: 14px 16px;
   outline: none;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background var(--dur-fast) ease;
 }
-.console-body input:focus { border-color: var(--accent); }
+.console-body input::placeholder { color: var(--text-mute); }
+.console-body input:focus {
+  border-color: var(--accent);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
 .btn {
   background: var(--accent);
-  color: #04120f;
+  color: var(--on-accent);
   border: none;
-  border-radius: 10px;
+  border-radius: 11px;
+  font-family: var(--sans);
   font-weight: 700;
   font-size: 15px;
   padding: 0 26px;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-normal) ease, background var(--dur-fast) ease;
 }
-.btn:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(0, 229, 192, 0.25); }
+.btn:hover { transform: translateY(-1px); background: var(--accent-strong); box-shadow: var(--shadow-accent); }
+.btn:active { transform: translateY(0); }
 .hint { padding: 0 20px 16px; font-family: var(--mono); font-size: 11px; color: var(--text-mute); }
 
 /* ── stat grid ── */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  margin: 48px 0;
+  gap: 16px;
+  margin: 52px 0;
 }
 .stat {
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: 16px;
+  padding: 24px;
   background: var(--bg-card);
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
 .stat .k { font-family: var(--mono); font-size: 12px; color: var(--text-mute); letter-spacing: 1px; }
-.stat .v { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; }
+.stat .v { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; }
 .stat .v.accent { color: var(--accent); }
 .stat .v.warn { color: var(--warn); }
 .stat .v.danger { color: var(--danger); }
-.stat .d { font-family: var(--mono); font-size: 11px; color: var(--accent-2); margin-top: 6px; }
+.stat .d { font-family: var(--mono); font-size: 11px; color: var(--accent-2); margin-top: 6px; font-weight: 600; }
 
 /* ── architecture strip ── */
 .section-label {
@@ -188,69 +255,42 @@ main { position: relative; z-index: 1; }
   letter-spacing: 2px;
   color: var(--text-mute);
   text-transform: uppercase;
-  margin: 56px 0 18px;
+  margin: 60px 0 18px;
 }
 .pipe {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 .node {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  background: var(--bg-elev);
+  border-radius: 14px;
+  padding: 18px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
 }
-.node .t { font-weight: 700; font-size: 14px; }
+.node .t { font-weight: 700; font-size: 14px; color: var(--text); }
 .node .s { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-top: 4px; }
 .node .tag {
   display: inline-block;
   margin-top: 10px;
   font-family: var(--mono);
   font-size: 10px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--accent-soft);
   color: var(--accent);
+  font-weight: 600;
 }
 
 footer {
   border-top: 1px solid var(--line);
-  padding: 24px 28px;
+  padding: 28px;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text-mute);
   text-align: center;
-}
-
-/* ── atmosphere: CRT 스캔라인 + 완만한 스캔 스윕 ──
-   관제 모니터 질감. 콘텐츠(z-index:1) 뒤(z-index:0)에 깔려 여백에서만 은은히 보인다. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.018) 0px,
-      rgba(255, 255, 255, 0.018) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-  opacity: 0.6;
-  animation: scandrift 7s linear infinite;
-}
-@keyframes scandrift {
-  from { transform: translateY(0); }
-  to { transform: translateY(3px); }
-}
-/* 그리드 배경이 아주 천천히 흘러 '살아있는' 관제 화면 느낌 */
-body::before { animation: griddrift 40s linear infinite; }
-@keyframes griddrift {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 48px 48px, 48px 48px; }
 }
 
 /* ── 상태바 부팅 시퀀스 — 서비스 표시가 순차 점등 ── */
@@ -279,35 +319,27 @@ body::before { animation: griddrift 40s linear infinite; }
   to { opacity: 1; transform: none; }
 }
 
-/* ── 카드 hover 상태 — 평면 → 반응형 표면(디자인된 느낌) ── */
+/* ── 카드 hover 상태 — 평면 → 반응형 표면(소프트 그림자로 뜸) ── */
 .stat {
   transition: border-color var(--dur-fast) ease, transform var(--dur-fast) ease,
     box-shadow var(--dur-normal) ease;
 }
-.stat::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  pointer-events: none;
-}
 .stat:hover {
-  border-color: rgba(0, 229, 192, 0.4);
+  border-color: var(--line-strong);
   transform: translateY(-3px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-lg);
 }
 .node {
   transition: border-color var(--dur-fast) ease, transform var(--dur-fast) ease,
-    background var(--dur-fast) ease;
+    box-shadow var(--dur-normal) ease;
 }
 .node:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
-  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
 }
 .node .tag { transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
-.node:hover .tag { border-color: rgba(0, 229, 192, 0.5); }
+.node:hover .tag { border-color: var(--accent); }
 
 /* ── 스크롤 진입 리빌 (Reveal 컴포넌트가 .in 토글) ── */
 .reveal {
@@ -330,7 +362,7 @@ body::before { animation: griddrift 40s linear infinite; }
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 229, 192, 0.07) 50%,
+    rgba(79, 70, 229, 0.08) 50%,
     transparent 100%
   );
   transform: translateX(-100%);
@@ -342,10 +374,7 @@ body::before { animation: griddrift 40s linear infinite; }
 
 /* ── accessibility: visible keyboard focus ──
    Keyboard/screen-reader users must see where focus is. :focus-visible only
-   paints the ring for keyboard navigation, so mouse clicks stay clean. This
-   sits last in the sheet so it wins the equal-specificity tie with base
-   `outline: none` inputs; component :focus / :focus-within border styles still
-   layer on top, and more-specific rings (e.g. .rm-trigger) keep their color. */
+   paints the ring for keyboard navigation, so mouse clicks stay clean. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -357,9 +386,7 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
-/* ── accessibility: respect reduced-motion ──
-   Neutralize CSS animations/transitions for users who ask for less motion.
-   (Framer Motion honors this separately via useReducedMotion.) */
+/* ── accessibility: respect reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

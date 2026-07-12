@@ -6,7 +6,7 @@ import CommandCenter from "./components/CommandCenter";
 import StatsBar from "./components/StatsBar";
 import ApiCallout from "./components/ApiCallout";
 import SearchBar from "./components/SearchBar";
-import WhyScamGraph from "./components/WhyScamGraph";
+import AccuracyBadge from "./components/AccuracyBadge";
 import DataSourcesPanel from "./components/DataSourcesPanel";
 import ThreatTicker from "./components/ThreatTicker";
 import TrendStrip from "./components/TrendStrip";
@@ -57,15 +57,13 @@ export default function Home() {
       <ThreatTicker />
 
       <div className="wrap">
-        <p className="eyebrow">Threat Intelligence · SDG 16</p>
+        <p className="eyebrow">Real-time Threat Intelligence</p>
         <h1 className="hero-title">
           사기의 <span>관계망</span>을<br />
           실시간으로 추적한다
         </h1>
         <p className="lede">
-          의심스러운 URL·전화번호·계좌를 넣으면 규칙 엔진과 공개 데이터로 위험을
-          분석하고, 사기 인프라의 연결망을 그래프와 지도로 펼쳐 보여줍니다. 블랙박스가
-          아닌, 근거를 설명하는 디지털 시민 방어 플랫폼.
+          URL·전화번호·계좌를 입력하면 위험도와 <b>판단 근거</b>, 연결된 사기 인프라를 즉시 보여줍니다.
         </p>
 
         <SearchBar />
@@ -73,12 +71,13 @@ export default function Home() {
         <CommandCenter />
 
         <Reveal>
-          <div className="section-label">// 그래프 관제 · 조직 단위 분석</div>
+          <div className="section-label">// 관계망 분석</div>
           <Observatory />
         </Reveal>
 
         <Reveal>
-          <WhyScamGraph />
+          <div className="section-label">// 판정 정확도</div>
+          <AccuracyBadge />
         </Reveal>
 
         <Reveal>
@@ -112,12 +111,12 @@ export default function Home() {
         </Reveal>
 
         <Reveal>
-          <div className="section-label">// 선제 감시 · 시민 참여</div>
+          <div className="section-label">// 감시 목록</div>
           <WatchlistPanel />
         </Reveal>
 
         <Reveal>
-          <div className="section-label">// 정정 창구</div>
+          <div className="section-label">// 이의 신청</div>
           <AppealForm />
         </Reveal>
       </div>

@@ -18,7 +18,7 @@ interface ScanConsoleProps {
 const GRADE_META: Record<ScanResult["grade"], { label: string; color: string }> = {
   danger: { label: "위험", color: "var(--danger)" },
   warning: { label: "경고", color: "var(--warn)" },
-  caution: { label: "주의", color: "#c0cf3d" },
+  caution: { label: "주의", color: "#ca8a04" },
   safe: { label: "안전", color: "var(--accent-2)" },
 };
 

@@ -14,7 +14,7 @@ const DEBOUNCE_MS = 250;
 const GRADE_COLOR: Record<NonNullable<SearchHit["grade"]>, string> = {
   danger: "var(--danger)",
   warning: "var(--warn)",
-  caution: "#c0cf3d",
+  caution: "#ca8a04",
   safe: "var(--accent-2)",
 };
 
