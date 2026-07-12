@@ -8,8 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "@/lib/api";
 
 // ── 계약 타입 (gateway CampaignController 미러) ─────────────────
 interface Pivot {
@@ -234,6 +233,8 @@ function DecryptingBody({ value }: { value: string }) {
 // ── 본문 도시에 ───────────────────────────────────────────────
 function DossierBody({ data, reduceMotion }: { data: CaseFile; reduceMotion: boolean }) {
   const gradeKo = GRADE_KO[data.risk_grade] ?? data.risk_grade;
+  // pivots가 누락된(부분적으로 유효한) 응답에서도 렌더가 터지지 않도록 방어(데모 세이프).
+  const pivots = data.pivots ?? [];
 
   return (
     <div className="cf-body">
@@ -260,13 +261,13 @@ function DossierBody({ data, reduceMotion }: { data: CaseFile; reduceMotion: boo
       </header>
 
       {/* 공유 피벗 — WHY these are one org (차별점, 최상단 강조) */}
-      {data.pivots.length > 0 && (
+      {pivots.length > 0 && (
         <section className="cf-pivots" aria-labelledby="cf-pivots-h">
           <div className="cf-section-label" id="cf-pivots-h">
             ◆ 조직 연결 근거 · SHARED INFRASTRUCTURE
           </div>
           <div className="cf-pivot-list">
-            {data.pivots.map((p, i) => (
+            {pivots.map((p, i) => (
               <div className="cf-pivot" key={`${p.type}-${p.value}-${i}`}>
                 <div className="cf-pivot-head">
                   <span className="cf-pivot-tag">{PIVOT_KO[p.type] ?? p.type}</span>

@@ -279,7 +279,7 @@ public class CampaignController {
         if (byId.containsKey(value)) return value;
         if (byLabel.containsKey(value)) return (String) byLabel.get(value).get("id");
 
-        String host = hostOf(value);
+        String host = HostUtil.hostOf(value);
         if (byId.containsKey(host)) return host;
         if (byLabel.containsKey(host)) return (String) byLabel.get(host).get("id");
 
@@ -397,19 +397,5 @@ public class CampaignController {
                     .append(" 상단 차단 시 ").append(n).append("개 대상을 한 번에 무력화할 수 있습니다.");
         }
         return sb.toString();
-    }
-
-    /** URL 이면 호스트만 추출(그래프 노드 id 와 매칭). 그 외엔 원본 소문자 트림. */
-    private static String hostOf(String value) {
-        String v = value == null ? "" : value.trim();
-        int scheme = v.indexOf("://");
-        if (scheme >= 0) v = v.substring(scheme + 3);
-        int at = v.indexOf('@');
-        if (at >= 0) v = v.substring(at + 1);
-        int slash = v.indexOf('/');
-        if (slash >= 0) v = v.substring(0, slash);
-        int colon = v.indexOf(':');
-        if (colon >= 0) v = v.substring(0, colon);
-        return v.toLowerCase();
     }
 }

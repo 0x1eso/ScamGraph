@@ -408,9 +408,10 @@ def score_enrichment(result: dict) -> dict:
     reasons = result.get("reasons", [])
     added = 0
 
-    # 도메인 나이
+    # 도메인 나이 — created 는 crawl_and_enrich 가 항상 ISO 문자열(또는 None)로 채운다.
+    # 방어적으로 문자열만 파싱한다(비문자열이면 조용히 건너뜀 → 예외를 흐름제어로 쓰지 않음).
     created = enrich.get("created")
-    if created:
+    if isinstance(created, str) and created:
         try:
             raw = created.replace("Z", "").split("+")[0].split(".")[0].strip()
             dt = datetime.fromisoformat(raw)

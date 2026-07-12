@@ -111,7 +111,7 @@ public class CheckController {
         //     설명 가능성 강화: 어느 피드에 언제 등재됐는지 근거로 남긴다.
         Set<String> feedSources = new LinkedHashSet<>();
         try {
-            String host = hostOf(value);
+            String host = HostUtil.hostOf(value);
             List<Map<String, Object>> hits = jdbc.query(
                     "SELECT source, source_kind, detail, first_seen FROM blocklist "
                             + "WHERE value = ? OR value = ? LIMIT 5",
@@ -175,7 +175,7 @@ public class CheckController {
                 byId.put((String) n.get("id"), n);
             }
             // URL 이면 호스트로 정규화해 그래프 노드와 매칭
-            String startId = byId.containsKey(value) ? value : hostOf(value);
+            String startId = byId.containsKey(value) ? value : HostUtil.hostOf(value);
             if (!byId.containsKey(startId)) {
                 return null;
             }
@@ -233,19 +233,5 @@ public class CheckController {
 
     private static String str(Object o, String dflt) {
         return o == null ? dflt : String.valueOf(o);
-    }
-
-    /** URL 이면 호스트만 추출(그래프 노드 id 와 매칭). 그 외엔 원본 소문자. */
-    private static String hostOf(String value) {
-        String v = value == null ? "" : value.trim();
-        int scheme = v.indexOf("://");
-        if (scheme >= 0) v = v.substring(scheme + 3);
-        int at = v.indexOf('@');
-        if (at >= 0) v = v.substring(at + 1);
-        int slash = v.indexOf('/');
-        if (slash >= 0) v = v.substring(0, slash);
-        int colon = v.indexOf(':');
-        if (colon >= 0) v = v.substring(0, colon);
-        return v.toLowerCase();
     }
 }

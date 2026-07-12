@@ -4,8 +4,7 @@
 // 데이터 페칭·훅 없음 → 서버 컴포넌트. 팔레트 토큰(globals.css) 재사용 + 스코프드 <style>.
 
 import AccuracyBadge from "./AccuracyBadge";
-
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "@/lib/api";
 
 // 차별점 5행. gov = 정부·통신사 서비스의 한계, sg = ScamGraph가 채우는 계층.
 // 과장 없이 "보완/연결"로 포지셔닝 — 우리가 더 낫다가 아니라 그들이 못 하는 걸 한다.

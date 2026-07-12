@@ -201,9 +201,15 @@
     return H.assess(location.hostname, toIndex());
   }
 
+  // Forms the user explicitly chose to proceed with — skip the guard so the
+  // requestSubmit() fallback (used when form.submit is shadowed) does not
+  // re-fire this capture listener and re-block the submission.
+  const proceededForms = new WeakSet();
+
   function onSubmitCapture(ev) {
     const form = ev.target;
     if (!form || form.tagName !== "FORM") return;
+    if (proceededForms.has(form)) return;
     const verdict = pageVerdict();
     if (verdict.level !== "danger" && verdict.level !== "warning") return;
     const field = formHasSensitiveField(form);
@@ -220,6 +226,7 @@
     }
     showGuardModal(verdict, field, actionHost, () => {
       // User chose to proceed: submit without re-triggering the guard.
+      proceededForms.add(form);
       try {
         form.submit();
       } catch (_e) {

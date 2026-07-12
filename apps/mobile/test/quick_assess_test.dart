@@ -44,9 +44,14 @@ void main() {
       'login.secure.account.verify.kakao-help.top',
       'http://185.220.101.44/login',
       'http://account-update.com@evil-phish.top',
-      // 보이스피싱/스미싱 전화 (VoIP)
+      // 인코딩된 IP(10진) — obfuscated_ip
+      'http://3626568449/login',
+      // 전각(fullwidth) 혼동문자 위장 — 'ｎ'(U+FF4E) → 스켈레톤 'naver.com'
+      'ｎaver.com',
+      // 보이스피싱/스미싱 전화 (VoIP·국제)
       '070-8890-1234',
       '050-7777-8888',
+      '+1-202-555-0100',
     ];
 
     for (final sample in scamSamples) {
@@ -167,6 +172,54 @@ void main() {
       expect(engine.classify('https://example.com'), 'url');
       expect(engine.classify('010-1234-5678'), 'phone');
       expect(engine.classify('110234567890123'), 'account');
+    });
+
+    test('hostOf 는 경로/쿼리의 @ 에 속지 않는다 — 화이트리스트 도메인을 보존한다', () {
+      // 리다이렉트 파라미터의 '@'(login@evil-phish.top)가 있어도 실제 호스트는
+      // www.naver.com 이므로 즉시 safe 여야 한다(파이썬 urlparse().hostname 과 동일).
+      final result =
+          engine.assess('https://www.naver.com/redirect?url=login@evil-phish.top');
+      expect(result.grade, Grade.safe);
+      expect(result.riskScore, 0);
+      expect(result.reasons.single.rule, 'verified_domain');
+    });
+
+    test('인코딩된 IP·전각 혼동문자·국제전화가 규칙을 발동한다', () {
+      expect(
+        engine.assess('http://3626568449/login').reasons.any((r) => r.rule == 'obfuscated_ip'),
+        isTrue,
+      );
+      expect(
+        engine.assess('ｎaver.com').reasons.any((r) => r.rule == 'homoglyph'),
+        isTrue,
+      );
+      final intl = engine.assess('+1-202-555-0100');
+      expect(intl.kind, 'phone');
+      expect(intl.reasons.any((r) => r.rule == 'intl_prefix'), isTrue);
+    });
+  });
+
+  // 드리프트 없는 단일 규칙 입력은 파이썬 crawler.py 와 **점수까지** 일치해야 한다.
+  // (url_shortener/double_encoding/nonstandard_port 는 contract·엔진 가중치가 달라 제외.)
+  group('파이썬 엔진과 점수까지 일치(비드리프트 규칙)', () {
+    test('혼동문자 표적 위장은 정확히 homoglyph 50 점', () {
+      // 'nаver.com' — 'а'(U+0430 키릴). 스켈레톤 naver.com=화이트리스트 → 50, 다른 신호 없음.
+      final result = engine.assess('nаver.com');
+      expect(result.riskScore, 50);
+      expect(result.grade, Grade.warning);
+    });
+
+    test('타이포스쿼팅 단독은 정확히 typosquatting 38 점', () {
+      final result = engine.assess('navor.com'); // navor≈naver(편집거리 1)
+      expect(result.riskScore, 38);
+      expect(result.grade, Grade.warning);
+    });
+
+    test('VoIP 단독은 정확히 voip_prefix 20 점(caution)', () {
+      final result = engine.assess('070-1111-2222');
+      expect(result.kind, 'phone');
+      expect(result.riskScore, 20);
+      expect(result.grade, Grade.caution);
     });
   });
 }

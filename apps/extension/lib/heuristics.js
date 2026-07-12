@@ -142,6 +142,74 @@
     return host === official || host.endsWith("." + official);
   }
 
+  // ---- declarativeNetRequest domain guard ----------------------------------
+  // A value is only usable as a DNR `requestDomains` entry if it is a plain,
+  // lowercase, ASCII hostname. chrome.declarativeNetRequest.updateDynamicRules
+  // is ALL-OR-NOTHING: a single invalid domain rejects the entire batch, which
+  // would silently disable ALL blocking. So we filter defensively here.
+  function isDnrDomain(d) {
+    if (!d || d.length > 253 || d.indexOf(".") < 0) return false;
+    if (!/^[a-z0-9.-]+$/.test(d)) return false; // no unicode, underscores, spaces
+    if (d.startsWith(".") || d.endsWith(".") || d.indexOf("..") >= 0) return false;
+    for (const label of d.split(".")) {
+      if (!label || label.length > 63 || label.startsWith("-") || label.endsWith("-")) return false;
+    }
+    return true;
+  }
+
+  // ---- DNR block-rule builder (pure) ---------------------------------------
+  // Turns a blocklist snapshot into declarativeNetRequest redirect rules.
+  // CRITICAL: only `kind === "domain"` entries become navigation rules — phone
+  // and account entries MUST NEVER become URL block rules. The allowlist is
+  // enforced by EXCLUSION (an allowed domain simply never gets a rule), which is
+  // equivalent to "allowlist wins over blocklist" for exact hosts.
+  //
+  // opts: { allowed:Set|string[], level:string, base:number, max:number }
+  // Returns { rules:[DNR rule], incidentMap:{ id -> {domain,severity,source} } }.
+  function buildBlockRules(entries, opts) {
+    const options = opts || {};
+    const allowed =
+      options.allowed instanceof Set ? options.allowed : new Set(options.allowed || []);
+    const base = typeof options.base === "number" ? options.base : 1;
+    const max = typeof options.max === "number" ? options.max : 4000;
+    const rules = [];
+    const incidentMap = {};
+
+    // "monitor" level = observe only, no navigation blocking.
+    if (options.level === "monitor") return { rules, incidentMap };
+
+    const seen = new Set();
+    let id = base;
+    for (const e of entries || []) {
+      if (!e || e.kind !== "domain") continue; // only domains are DNR-blockable
+      const domain = normalizeHost(e.value);
+      if (!isDnrDomain(domain) || seen.has(domain) || allowed.has(domain)) continue;
+      seen.add(domain);
+      if (rules.length >= max) break;
+
+      incidentMap[id] = {
+        domain,
+        severity: e.severity === "warning" ? "warning" : "danger",
+        source: e.source || "unknown",
+      };
+      rules.push({
+        id,
+        priority: 1,
+        action: {
+          type: "redirect",
+          // Opaque incident id only — the visited URL is NEVER placed in the query.
+          redirect: { extensionPath: "/blocked.html?r=" + id },
+        },
+        condition: {
+          requestDomains: [domain], // matches the domain and its subdomains
+          resourceTypes: ["main_frame"],
+        },
+      });
+      id++;
+    }
+    return { rules, incidentMap };
+  }
+
   // ---- Core assessment ------------------------------------------------------
   // blockIndex: optional { has(domain), get(domain) } view over the cached
   // blocklist. When a domain is on the blocklist that is the strongest signal.
@@ -234,6 +302,8 @@
     normalizeHost,
     toUnicodeHost,
     domainChain,
+    isDnrDomain,
+    buildBlockRules,
     LEVEL_RANK,
   };
 })(typeof self !== "undefined" ? self : this);

@@ -527,12 +527,15 @@ String hostOf(String target) {
   var v = target.trim();
   final scheme = v.indexOf('://');
   if (scheme >= 0) v = v.substring(scheme + 3);
-  final at = v.indexOf('@');
+  // authority 는 첫 '/', '?', '#' 앞까지만이다. 이후 경로/쿼리/프래그먼트에 있는
+  // '@'·':' 가 호스트로 오인되지 않도록 **authority 를 먼저 잘라낸다**
+  // (urlparse().hostname 의미와 일치 — 예: 'a.com/x?u=b@evil.top' → 'a.com').
+  final end = v.indexOf(RegExp(r'[/?#]'));
+  if (end >= 0) v = v.substring(0, end);
+  // userinfo 제거: authority 내 마지막 '@' 뒤가 host:port (urlparse 는 rpartition('@')).
+  final at = v.lastIndexOf('@');
   if (at >= 0) v = v.substring(at + 1);
-  final slash = v.indexOf('/');
-  if (slash >= 0) v = v.substring(0, slash);
-  final query = v.indexOf('?');
-  if (query >= 0) v = v.substring(0, query);
+  // 포트 제거.
   final colon = v.indexOf(':');
   if (colon >= 0) v = v.substring(0, colon);
   return v.toLowerCase();

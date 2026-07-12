@@ -157,7 +157,7 @@ public class ReportDefense {
 
     /** 정상 도메인(또는 그 하위 도메인) 신고인지 — 오탐/경쟁사 공격 방어. */
     public boolean isAllowlisted(String target) {
-        String host = hostOf(target);
+        String host = HostUtil.hostOf(target);
         if (host.isEmpty()) {
             return false;
         }
@@ -227,20 +227,6 @@ public class ReportDefense {
                         + "WHERE reporter_hash = ? AND created_at > now() - make_interval(secs => ?)",
                 Long.class, reporterHash, DEDUP_WINDOW_SECONDS);
         return n == null ? 0 : n;
-    }
-
-    /** URL 이면 호스트만 추출. 그 외엔 원본 소문자(전화/계좌는 allowlist 대상 아님). */
-    private static String hostOf(String value) {
-        String v = value == null ? "" : value.trim();
-        int scheme = v.indexOf("://");
-        if (scheme >= 0) v = v.substring(scheme + 3);
-        int at = v.indexOf('@');
-        if (at >= 0) v = v.substring(at + 1);
-        int slash = v.indexOf('/');
-        if (slash >= 0) v = v.substring(0, slash);
-        int colon = v.indexOf(':');
-        if (colon >= 0) v = v.substring(0, colon);
-        return v.toLowerCase();
     }
 
     private static String firstForwardedFor(String xff) {

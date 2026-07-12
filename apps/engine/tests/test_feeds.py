@@ -109,3 +109,67 @@ def test_shared_ip_cluster_exists():
 def test_ingest_config():
     assert GRAPH_CAP > 0
     assert len(SOURCES) == 7
+
+
+# ---------------------------------------------------------------------------
+# brands — 사칭 판정(공식 도메인 제외 · CT 엄격 필터)
+# ---------------------------------------------------------------------------
+def test_matched_brand_excludes_official_domains():
+    assert matched_brand("toss.im") is None
+    assert matched_brand("kakaopay.com") is None            # 공식 도메인
+    assert matched_brand("kakao-account-safe.live") == "kakao"
+    assert matched_brand("plainsite.com") is None           # 브랜드 없음
+
+
+def test_looks_like_impersonation_requires_suspicious_token():
+    # CT 는 정상 인증서가 방대하므로 브랜드 + 의심 토큰이 함께일 때만 신호.
+    assert looks_like_impersonation("naver-blog.com") is None
+    assert looks_like_impersonation("naver-login.com") == "naver"
+
+
+# ---------------------------------------------------------------------------
+# ingest_all — 수집→적재 오케스트레이션(싱크는 가짜로 대체, 실제 DB 무접촉)
+# ---------------------------------------------------------------------------
+def test_ingest_all_offline_orchestrates(monkeypatch):
+    import app.graph as graph
+    import app.pg as pg
+
+    seen: dict = {}
+
+    def _fake_block(indicators):
+        seen["pg"] = len(indicators)
+        return {"upserted": len(indicators)}
+
+    def _fake_graph(indicators):
+        seen["graph"] = len(indicators)
+        return {"nodes": len(indicators)}
+
+    monkeypatch.setattr(pg, "upsert_blocklist", _fake_block)
+    monkeypatch.setattr(graph, "upsert_feed_indicators", _fake_graph)
+
+    from app.feeds.ingest import ingest_all
+
+    out = ingest_all()
+    assert out["total"] > 0
+    assert out["pg"] == {"upserted": out["total"]}          # 블록리스트는 전량
+    assert out["graph"]["nodes"] <= GRAPH_CAP               # 그래프는 상한 적용
+    assert _ALL_SOURCES <= set(out["per_source"])
+    assert sum(out["per_source"].values()) == out["total"]
+
+
+def test_ingest_all_survives_sink_failure(monkeypatch):
+    import app.graph as graph
+    import app.pg as pg
+
+    def _raise(*a, **k):
+        raise RuntimeError("sink down")
+
+    monkeypatch.setattr(pg, "upsert_blocklist", _raise)
+    monkeypatch.setattr(graph, "upsert_feed_indicators", _raise)
+
+    from app.feeds.ingest import ingest_all
+
+    out = ingest_all()
+    assert "error" in out["pg"]
+    assert "error" in out["graph"]
+    assert out["total"] > 0                                 # 수집 자체는 성공(데모 세이프)

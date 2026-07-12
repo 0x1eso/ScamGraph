@@ -1,7 +1,7 @@
 // ScamGraph — 커뮤니티 신고 + 사후 대응 가이드 API 클라이언트 (native fetch, 무의존)
 // 신고(플라이휠)와 위협 등급별 행동 지침을 게이트웨이에서 가져오는 얇은 HTTP 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // gateway /api/report 응답과 정확히 일치해야 하는 신고 결과 타입.
 // reports = 이 대상의 누적 커뮤니티 신고 수(신고할수록 모두가 더 안전해진다).

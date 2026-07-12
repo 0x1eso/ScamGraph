@@ -2,7 +2,7 @@
 // 다른 앱에서 공유된 링크·번호를 gateway /api/check 로 넘겨 즉시 안전 판정을 받는다.
 // "웹사이트를 찾아오지 않는다 — 검사를 사용자에게 가져간다"는 목표를 위한 얇은 HTTP 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // gateway /api/check 응답과 정확히 일치해야 하는 판정 결과 타입.
 export type CheckResult = {

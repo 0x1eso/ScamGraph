@@ -23,7 +23,6 @@ import java.util.Map;
 public class AdminController {
 
     private final JdbcTemplate jdbc;
-    private final long startedAt = System.currentTimeMillis();
 
     public AdminController(JdbcTemplate jdbc) {
         this.jdbc = jdbc;

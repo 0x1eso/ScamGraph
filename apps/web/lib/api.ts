@@ -1,7 +1,28 @@
 // ScamGraph — gateway API 클라이언트 (native fetch, 무의존)
 // 스캔 콘솔 + 그래프 탐색이 공유하는 얇은 HTTP 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+// 게이트웨이 베이스 URL — 모든 클라이언트(lib·컴포넌트)가 여기서 단일 소스로 가져다 쓴다.
+// (이전엔 ~15개 파일에서 동일 문자열을 재선언했음 → 여기로 중앙화.)
+export const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+
+// 데모 세이프 GET 헬퍼 — 어떤 실패(네트워크·비200·JSON 파싱)에도 예외를 던지지 않고
+// fallback을 돌려준다. "게이트웨이가 죽어도 화면은 시드로 즉시 렌더"라는 원칙의 공용 구현.
+// path는 "/api/…" 형태(GATEWAY가 앞에 붙는다). 던져야 하는 엔드포인트는 이 헬퍼를 쓰지 않는다.
+export async function fetchJson<T>(
+  path: string,
+  opts: { fallback: T; init?: RequestInit },
+): Promise<T> {
+  try {
+    const res = await fetch(`${GATEWAY}${path}`, opts.init);
+    if (!res.ok) {
+      return opts.fallback;
+    }
+    return (await res.json()) as T;
+  } catch {
+    // 게이트웨이 미가동/네트워크 실패/손상 응답 → fallback(예외를 밖으로 던지지 않는다).
+    return opts.fallback;
+  }
+}
 
 // gateway/engine 응답과 정확히 일치해야 하는 스캔 결과 타입.
 // source/first_seen은 외부 위협 피드 근거(external_feed_hit 등)에만 채워지는 선택 필드.
@@ -168,13 +189,5 @@ export function seedFeedStats(): FeedStats {
 // 연결된 위협 피드 집계를 가져온다(DataSourcesPanel이 ~15초 주기로 호출).
 // 다른 fetch와 달리 어떤 실패에도 예외를 던지지 않고 시드로 폴백한다(항상 렌더 = 데모 세이프).
 export async function getFeedStats(): Promise<FeedStats> {
-  try {
-    const res = await fetch(`${GATEWAY}/api/feeds/stats`);
-    if (!res.ok) {
-      return seedFeedStats();
-    }
-    return (await res.json()) as FeedStats;
-  } catch {
-    return seedFeedStats();
-  }
+  return fetchJson<FeedStats>("/api/feeds/stats", { fallback: seedFeedStats() });
 }

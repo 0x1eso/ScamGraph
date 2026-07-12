@@ -11,8 +11,8 @@
 
 import { useEffect, useState } from "react";
 import CountUp from "./CountUp";
+import { fetchJson } from "@/lib/api";
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 const POLL_MS = 40000;
 
 interface ComponentInfo {
@@ -92,16 +92,12 @@ function normalize(raw: unknown): Analytics {
 }
 
 async function fetchAnalytics(signal: AbortSignal): Promise<Analytics> {
-  try {
-    const res = await fetch(`${GATEWAY}/api/graph/analytics`, { signal, cache: "no-store" });
-    if (!res.ok) {
-      return SEED;
-    }
-    return normalize(await res.json());
-  } catch {
-    // 게이트웨이/Neo4j 미가동 → 시드(예외를 밖으로 던지지 않는다 = 데모 세이프)
-    return SEED;
-  }
+  // 실패(비200·네트워크·손상 JSON)면 SEED로 폴백하고, 성공 응답은 정규화한다(데모 세이프).
+  const raw = await fetchJson<unknown>("/api/graph/analytics", {
+    fallback: SEED,
+    init: { signal, cache: "no-store" },
+  });
+  return normalize(raw);
 }
 
 export default function Observatory() {

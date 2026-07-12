@@ -75,7 +75,7 @@ public class BlocklistController {
     }
 
     /** 정렬된 value 를 이어붙여 SHA-256 → 앞 16자리. 내용이 같으면 version 도 같다(결정적). */
-    private static String hashOf(List<Map<String, Object>> entries) {
+    static String hashOf(List<Map<String, Object>> entries) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             for (Map<String, Object> e : entries) {

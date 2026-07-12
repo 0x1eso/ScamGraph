@@ -4,7 +4,8 @@
 // 다른 개발자가 위협 데이터를 조회/스캔할 수 있음을 알리고 Swagger 문서로 안내한다.
 // 팔레트 토큰(globals.css)을 재사용하고, 추가 스타일은 스코프드 <style> 블록에 둔다.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "@/lib/api";
+
 const CURL = `curl -X POST ${GATEWAY}/api/scan -d '{"target":"..."}'`;
 
 export default function ApiCallout() {

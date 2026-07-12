@@ -156,12 +156,13 @@ object LocalDetector {
         var v = target.trim()
         val scheme = v.indexOf("://")
         if (scheme >= 0) v = v.substring(scheme + 3)
-        val at = v.indexOf('@')
+        // authority 는 첫 '/', '?', '#' 앞까지만 — 이후 경로/쿼리의 '@'·':' 가 호스트로
+        // 오인되지 않도록 authority 를 먼저 잘라낸다(Dart hostOf / urlparse 미러).
+        val end = v.indexOfFirst { it == '/' || it == '?' || it == '#' }
+        if (end >= 0) v = v.substring(0, end)
+        // userinfo 제거: 마지막 '@' 뒤가 host:port.
+        val at = v.lastIndexOf('@')
         if (at >= 0) v = v.substring(at + 1)
-        val slash = v.indexOf('/')
-        if (slash >= 0) v = v.substring(0, slash)
-        val query = v.indexOf('?')
-        if (query >= 0) v = v.substring(0, query)
         val colon = v.indexOf(':')
         if (colon >= 0) v = v.substring(0, colon)
         return v.lowercase()

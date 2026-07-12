@@ -7,8 +7,7 @@
 // 게이트웨이가 죽어도 로컬 접수번호를 발급해 항상 확인을 표시한다(데모 세이프).
 
 import { useState, type FormEvent } from "react";
-
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "@/lib/api";
 
 type Kind = "url" | "phone" | "account" | "brand";
 

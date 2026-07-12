@@ -1,7 +1,7 @@
 // ScamGraph — 실시간 피드 구독 헬퍼 (native WebSocket, 무의존)
 // gateway의 /ws/feed 로 접속해 스캔·신고 이벤트를 스트리밍으로 받아온다.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // 연결이 끊겼을 때 재접속을 시도하기 전 대기 시간(ms).
 const RECONNECT_DELAY_MS = 2000;

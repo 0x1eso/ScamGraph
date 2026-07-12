@@ -104,7 +104,15 @@ export default function CommandCenter() {
     let alive = true;
     getGraph()
       .then((live) => {
-        if (alive && live && Array.isArray(live.nodes) && live.nodes.length > 0) {
+        // nodes·edges가 모두 배열일 때만 교체 — edges 누락 응답이면 GraphExplorer의
+        // data.edges.forEach가 터져 아일랜드가 붕괴하므로, 그 경우 mockGraph를 유지한다(데모 세이프).
+        if (
+          alive &&
+          live &&
+          Array.isArray(live.nodes) &&
+          live.nodes.length > 0 &&
+          Array.isArray(live.edges)
+        ) {
           setGraphData(live);
         }
       })

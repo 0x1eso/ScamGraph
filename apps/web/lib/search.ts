@@ -1,7 +1,7 @@
 // ScamGraph — 통합 검색 API 클라이언트 (native fetch, 무의존)
 // 상단 검색창이 도메인·번호·계좌·IP 등을 즉시 조회할 때 사용하는 얇은 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // gateway 검색 응답과 정확히 일치해야 하는 히트 타입.
 // type ∈ Target|Host|IP|Phone|Account|Report|Campaign, grade는 미평가 시 null.

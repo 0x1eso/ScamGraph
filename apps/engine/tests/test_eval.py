@@ -65,3 +65,30 @@ def test_brand_embedded_impersonation():
     res = quick_assess("tosspay-help.info")
     rules = {r["rule"] for r in res["reasons"]}
     assert "brand_impersonation" in rules
+
+
+# ---------------------------------------------------------------------------
+# evaluate() 리포트 구조 불변식 — 혼동행렬/카테고리 합계 일관성
+# ---------------------------------------------------------------------------
+def test_confusion_matrix_sums_to_samples():
+    m = evaluate()
+    c = m["confusion"]
+    assert c["tp"] + c["fp"] + c["tn"] + c["fn"] == m["samples"]
+    assert m["scam_samples"] == c["tp"] + c["fn"]
+    assert m["legit_samples"] == c["tn"] + c["fp"]
+
+
+def test_misses_are_only_subtle_false_negatives():
+    # precision 1.0(FP 0) 이므로 misses 는 전부 FN 이고, 정직한 미탐(subtle)이어야 한다.
+    m = evaluate()
+    assert m["confusion"]["fp"] == 0
+    assert all(x["type"] == "FN" for x in m["misses"])
+    assert all(x["category"] == "subtle" for x in m["misses"])
+
+
+def test_by_category_totals_are_consistent():
+    m = evaluate()
+    assert sum(stat["total"] for stat in m["by_category"].values()) == m["samples"]
+    for stat in m["by_category"].values():
+        assert 0 <= stat["correct"] <= stat["total"]
+        assert stat["kind"] in {"scam", "legit"}

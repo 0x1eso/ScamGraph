@@ -76,6 +76,8 @@ class SmsReceiver : BroadcastReceiver() {
         s = s.replace(Regex("[\\[({]\\s*\\.\\s*[\\])}]"), ".")
         s = s.replace(Regex("[\\[({]\\s*dot\\s*[\\])}]", RegexOption.IGNORE_CASE), ".")
         s = s.replace(Regex("\\s+dot\\s+", RegexOption.IGNORE_CASE), ".")
+        // 콜론 위장 복원(Dart refang 미러): 'hxxp[:]//' → 'http://'.
+        s = s.replace(Regex("[\\[(]\\s*:\\s*[\\])]"), ":")
         s = s.replace("[/]", "/")
         return s
     }

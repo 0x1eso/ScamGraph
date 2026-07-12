@@ -142,41 +142,15 @@ async function rebuildRules() {
     )
   );
 
-  const rules = [];
-  const incidentMap = {};
-
-  // "monitor" level = observe only, no navigation blocking.
-  if (settings.level !== "monitor") {
-    const seen = new Set();
-    let id = BLOCK_RULE_BASE;
-    for (const e of entries) {
-      if (!e || e.kind !== "domain") continue; // only domains are DNR-blockable
-      const domain = self.SGHeuristics.normalizeHost(e.value);
-      if (!domain || !domain.includes(".") || seen.has(domain) || allowed.has(domain)) continue;
-      seen.add(domain);
-      if (rules.length >= MAX_BLOCK_RULES) break;
-
-      incidentMap[id] = {
-        domain,
-        severity: e.severity === "warning" ? "warning" : "danger",
-        source: e.source || "unknown",
-      };
-      rules.push({
-        id,
-        priority: 1,
-        action: {
-          type: "redirect",
-          // Opaque incident id only — the visited URL is NEVER placed in the query.
-          redirect: { extensionPath: "/blocked.html?r=" + id },
-        },
-        condition: {
-          requestDomains: [domain], // matches the domain and its subdomains
-          resourceTypes: ["main_frame"],
-        },
-      });
-      id++;
-    }
-  }
+  // Only `kind === "domain"` entries become navigation rules — phone/account
+  // entries are never turned into URL block rules. Invalid hostnames are dropped
+  // so a single bad entry can't reject the whole updateDynamicRules() batch.
+  const { rules, incidentMap } = self.SGHeuristics.buildBlockRules(entries, {
+    allowed,
+    level: settings.level,
+    base: BLOCK_RULE_BASE,
+    max: MAX_BLOCK_RULES,
+  });
 
   // The incident map lives in session storage (local, trusted) so blocked.js can
   // resolve ?r=<id> back to a domain without the raw URL ever touching the query.
@@ -292,8 +266,13 @@ function createContextMenus() {
 }
 
 async function openDetailFor(value, tab) {
-  // Stash the pending target so the side panel can render the full verdict.
-  await chrome.storage.session.set({ pendingCheck: { value, at: Date.now() } });
+  // chrome.sidePanel.open() must be invoked synchronously within the user
+  // gesture (the context-menu click). An `await` before it consumes the gesture
+  // and the open silently fails. So we stash the pending target fire-and-forget
+  // (the panel also re-renders on storage.session change) and open immediately.
+  chrome.storage.session
+    .set({ pendingCheck: { value, at: Date.now() } })
+    .catch(() => {});
   try {
     if (tab && tab.windowId != null) {
       await chrome.sidePanel.open({ windowId: tab.windowId });

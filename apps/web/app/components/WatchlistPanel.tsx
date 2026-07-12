@@ -7,8 +7,8 @@
 // 표현 가이드 준수: 도메인 defang·계좌/전화 마스킹, "관측/신고/정황" 프레임, 단정 금지.
 
 import { useEffect, useState, type FormEvent } from "react";
+import { GATEWAY, fetchJson } from "@/lib/api";
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
 const POLL_MS = 30000;
 const ALERT_LIMIT = 8;
 
@@ -120,15 +120,12 @@ function normalizeAlerts(raw: unknown): Alert[] {
 }
 
 async function fetchAlerts(signal: AbortSignal): Promise<Alert[]> {
-  try {
-    const res = await fetch(`${GATEWAY}/api/alerts?limit=${ALERT_LIMIT}`, { signal, cache: "no-store" });
-    if (!res.ok) {
-      return seedAlerts();
-    }
-    return normalizeAlerts(await res.json());
-  } catch {
-    return seedAlerts();
-  }
+  // 실패(비200·네트워크·손상)면 null로 폴백 → normalizeAlerts가 시드로 메운다(데모 세이프).
+  const raw = await fetchJson<unknown>(`/api/alerts?limit=${ALERT_LIMIT}`, {
+    fallback: null,
+    init: { signal, cache: "no-store" },
+  });
+  return normalizeAlerts(raw);
 }
 
 // target 패턴으로 유형 추론(자동 감지). 완벽할 필요 없음 — 서버가 최종 판정.

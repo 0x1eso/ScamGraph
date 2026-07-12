@@ -6,6 +6,31 @@
 
 주변 사기(스미싱·보이스피싱)로부터 사용자를 지키는 **주변형(ambient) 보호** 앱입니다.
 
+## 정적 검증 상태 (이번 패스)
+
+**Flutter/Dart SDK 가 이 환경에 없어 `dart analyze`·`dart test` 를 실행하지 못했습니다.** 대신
+Dart·Kotlin 전 소스를 **수동 타입/로직 리뷰**하고 파이썬 엔진(`apps/engine`)과 규칙 parity 를
+대조했습니다.
+
+- **검증됨(수동 리뷰)**:
+  - Dart 오프라인 엔진(`quick_assess.dart`·`signals.dart`)의 규칙 로직·가중치·등급 임계값이
+    `contracts/rules.json` 및 파이썬 `crawler.py`/`app/signals/*` 와 일치(드리프트 3건은 아래).
+  - 골든 테스트 표본 전부를 손으로 트레이스해 기대 등급이 엔진 산출과 일치함을 확인.
+  - Dart↔Kotlin `hostOf`·`refang`·blocklist 멤버십·시드 건수의 상호 일관성.
+  - MethodChannel 이름/메서드가 Dart(`config_store`·`share_handler`)↔Kotlin(`MainActivity`) 일치.
+- **이번 패스에서 고친 버그**:
+  1. `hostOf`(Dart·Kotlin): 경로/쿼리의 `@`(예: `a.com/x?u=b@evil.top`)를 호스트로 오인하던
+     결함 → **authority 를 먼저 분리**하도록 수정(파이썬 `urlparse().hostname` 과 일치). 화이트리스트
+     우회·오탐을 유발하던 실버그. 회귀 테스트 추가.
+  2. `ScamCallScreeningService.kt`: 상위 클래스 중첩 타입 `CallResponse` 를 단순명으로 참조 —
+     Kotlin 은 Java 와 달리 상속된 중첩 타입을 스코프에 넣지 않아 **미해결 참조**가 된다. 명시적
+     `import` 추가.
+  3. `SmsReceiver.refang`: Dart `refang` 의 콜론 복원(`[:]`→`:`)이 빠져 있던 파리티 갭 보완.
+- **미검증(실행 필요)**: 실제 컴파일/링크, `flutter test` 통과, 위젯 렌더, 실기기 SMS/통화/공유
+  플로우. Flutter SDK 환경에서 `flutter pub get → flutter test → flutter run` 으로 확정해야 합니다.
+- **알려진 이식 한계(의도적·문서화)**: 퓨니코드(xn--) 유니코드 디코드 없음(→ `homograph` +35 로만
+  처리), eTLD+1 근사, 가중치 드리프트 3건은 아래 parity 절 참조.
+
 ## 아키텍처 — "공용 두뇌 + 온‑디바이스 오프라인 우선"
 
 초기 버전은 게이트웨이 `/api/check` 하나만 호출하는 순수 얇은 클라이언트였지만, 지금은

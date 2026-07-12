@@ -1,7 +1,7 @@
 // ScamGraph — 사기 조직 귀속(Attribution) API 클라이언트 (native fetch, 무의존)
 // 단일 엔티티 → 공유 인프라 피벗으로 조직 전체를 복원하는 얇은 HTTP 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // 공유 인프라 피벗 한 건(같은 IP·계좌·전화·호스트를 몇 개 대상과 공유하는지).
 export type Pivot = { type: string; value: string; sharedWith: number };

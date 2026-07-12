@@ -6,8 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useCountUp } from "@/lib/useCountUp";
-
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { fetchJson } from "@/lib/api";
 
 interface Accuracy {
   accuracy: number;
@@ -37,16 +36,12 @@ export default function AccuracyBadge() {
 
   useEffect(() => {
     let alive = true;
-    fetch(`${GATEWAY}/api/accuracy`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: unknown) => {
-        if (alive && isAccuracy(d)) {
-          setM({ ...SEED, ...d });
-        }
-      })
-      .catch(() => {
-        /* 엔진 미가동 → 시드 유지 */
-      });
+    // 실패(비200·네트워크·손상)면 null → 시드 유지. 유효한 응답만 병합한다(데모 세이프).
+    fetchJson<unknown>("/api/accuracy", { fallback: null }).then((d) => {
+      if (alive && isAccuracy(d)) {
+        setM({ ...SEED, ...d });
+      }
+    });
     return () => {
       alive = false;
     };

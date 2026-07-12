@@ -1,7 +1,7 @@
 // ScamGraph — 관제 관리자 API 클라이언트 (native fetch, 무의존)
 // /admin 콘솔이 사용하는 분석 지표 + 신고 모더레이션 HTTP 레이어.
 
-const GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import { GATEWAY } from "./api";
 
 // 관리자 대시보드가 소비하는 집계 분석 스냅샷(게이트웨이 응답과 정확히 일치).
 export type Analytics = {
